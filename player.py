@@ -101,6 +101,9 @@ def main(player):
 					if tar == 0:
 						position = game.num_to_position(target[0][i])
 						game.player.open(position[0], position[1])
+					elif tar == 1:
+						position = game.num_to_position(target[0][i])
+						game.flag[position[0]][position[1]] = True
 							
 			elif len(target[2]) != 0 and min(target[2]) <  p_land:
 				position = game.num_to_position(target[0][np.argmin(target[2])])
@@ -113,12 +116,12 @@ def main(player):
 
 ### easy   950/1000
 ### normal 823/1000
-### hard   
+### hard    42/100
 
 if __name__ == "__main__":
 
 	n_win = 0
-	n_game = 250
+	n_game = 1
 	difficulty = 2
 
 	for n in range(n_game):
