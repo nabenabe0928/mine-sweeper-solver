@@ -4,114 +4,113 @@ import math
 import numpy as np
 
 class _game():
-	def __init__(self, player):
-		self.player = player
-		self.W = player.width
-		self.H = player.height
-		self.flag = [[False for h in range(self.H)] for w in range(self.W)]
-		self.n_open = self.W * self.H
+  def __init__(self, player):
+    self.player = player
+    self.W = player.width
+    self.H = player.height
+    self.flag = [[False for h in range(self.H)] for w in range(self.W)]
+    self.n_open = self.W * self.H
 
-	def GetFlag(self):
-		for w in range(self.W):
-			for h in range(self.H):
-				if self.player.GetCellInfo(w, h) != -1:
-					count = 0
-					around = self.player.around(w, h)
-					for a in around:
-						if self.player.GetCellInfo(a[0], a[1]) == -1:
-							count += 1
+   def GetFlag(self):
+    for w in range(self.W):
+      for h in range(self.H):
+        if self.player.GetCellInfo(w, h) != -1:
+          count = 0
+          around = self.player.around(w, h)
+		
+          for a in around:
+            if self.player.GetCellInfo(a[0], a[1]) == -1:
+              count += 1
 					
-					if count == self.player.GetCellInfo(w, h):
-						for a in around:
-							if self.player.GetCellInfo(a[0], a[1]) == -1:
-								self.flag[a[0]][a[1]] = True
+          if count == self.player.GetCellInfo(w, h):
+            for a in around:
+              if self.player.GetCellInfo(a[0], a[1]) == -1:
+                self.flag[a[0]][a[1]] = True
 
-	def OpenSafe(self):
-		for w in range(self.W):
-			for h in range(self.H):
-				if self.player.GetCellInfo(w, h) != -1:
-					count = 0
-					around = self.player.around(w, h)
-					for a in around:
-						if self.flag[a[0]][a[1]]:
-							count += 1
-					if count == self.player.GetCellInfo(w, h):
-						for a in around:
-							if not self.flag[a[0]][a[1]] and self.player.GetCellInfo(a[0], a[1]) == -1:
-								
-								self.player.open(a[0], a[1])
+  def OpenSafe(self):
+    for w in range(self.W):
+      for h in range(self.H):
+        if self.player.GetCellInfo(w, h) != -1:
+          count = 0
+          around = self.player.around(w, h)
+		
+          for a in around:
+            if self.flag[a[0]][a[1]]:
+              count += 1
+	
+          if count == self.player.GetCellInfo(w, h):
+            for a in around:
+              if not self.flag[a[0]][a[1]] and self.player.GetCellInfo(a[0], a[1]) == -1:
+                self.player.open(a[0], a[1])
 
-	def cannot_open(self):
-		n_open = 0
-		for w in range(self.W):
-			for h in range(self.H):
-				if self.player.GetCellInfo(w, h) >= 0:
-					n_open += 1
+  def cannot_open(self):
+    n_open = 0
 
-		if n_open == self.n_open:
-			return True
-		else:
-			self.n_open = n_open
-			return False
+    for w in range(self.W):
+      for h in range(self.H):
+        if self.player.GetCellInfo(w, h) >= 0:
+          n_open += 1
 
-	def random_open(self):
-		for w in range(self.W):
-			for h in range(self.H):
-				if not self.flag[w][h] and self.player.GetCellInfo(w, h) == -1:
-					self.player.open(w, h)
-					return None
+    if n_open == self.n_open:
+      return True
+    else:
+      self.n_open = n_open
+      return False
 
-	def num_to_position(self, num):
-		h = math.floor(num / self.W)
-		w = num - (self.W * h) 
-		return [w, h]
+  def num_to_position(self, num):
+    h = math.floor(num / self.W)
+    w = num - (self.W * h) 
+    return [w, h]
 
-	def open_land(self):
-		for w in range(self.W):
-			for h in range(self.H):
-				if self.player.GetCellInfo(w, h) == -1:
-					land = True
-					around = self.player.around(w, h)
-					for a in around:
-						if self.player.GetCellInfo(a[0], a[1]) != -1:
-							land = False
-					if land:
-						self.player.open(w, h)
-						return None
+  def open_land(self):
+    for w in range(self.W):
+      for h in range(self.H):
+        if self.player.GetCellInfo(w, h) == -1:
+          land = True
+	
+          around = self.player.around(w, h)
+          for a in around:
+            if self.player.GetCellInfo(a[0], a[1]) != -1:
+              land = False
+	
+          if land:
+            self.player.open(w, h)
+            return None
 
 		
 
 def main(player):
-	game =_game(player) 
-	game.player.start(int(game.W / 2), int(game.H / 2))
-	game.GetFlag()
-	game.OpenSafe()
+  game =_game(player) 
+  game.player.start(int(game.W / 2), int(game.H / 2))
+  game.GetFlag()
+  game.OpenSafe()
 
-	while not game.player.over and not game.player.clear:
-		game.GetFlag()
-		game.OpenSafe()
+  while not game.player.over and not game.player.clear:
+    game.GetFlag()
+    game.OpenSafe()
 
-		if game.cannot_open():
-			prob = probability(game.player, game.flag)
-			target, p_land = prob.searching()
-			print(target, p_land)
-			if 0 in target[2]:
-				idx = []
-				for i, tar in enumerate(target[2]):
-					if tar == 0:
-						position = game.num_to_position(target[0][i])
-						game.player.open(position[0], position[1])
-					elif tar == 1:
-						position = game.num_to_position(target[0][i])
-						game.flag[position[0]][position[1]] = True
-							
-			elif len(target[2]) != 0 and min(target[2]) <  p_land:
-				position = game.num_to_position(target[0][np.argmin(target[2])])
-				game.player.open(position[0], position[1])
-			else:
-				game.open_land()
+    if game.cannot_open():
+      prob = probability(game.player, game.flag)
+      target, p_land = prob.searching()
+      print(target, p_land)
 
+      if 0 in target[2]:
+        idx = []
+        for i, tar in enumerate(target[2]):
+          if tar == 0:
+            position = game.num_to_position(target[0][i])
+            game.player.open(position[0], position[1])
+          elif tar == 1:
+            position = game.num_to_position(target[0][i])
+            game.flag[position[0]][position[1]] = True
 		
+      elif len(target[2]) != 0 and min(target[2]) <  p_land:
+        position = game.num_to_position(target[0][np.argmin(target[2])])
+        game.player.open(position[0], position[1])
+	
+      else:
+        game.open_land()
+	
 	return game.player.clear		
 
 ### easy   950/1000
@@ -119,7 +118,6 @@ def main(player):
 ### hard    42/100
 
 if __name__ == "__main__":
-
 	n_win = 0
 	n_game = 1
 	difficulty = 2
