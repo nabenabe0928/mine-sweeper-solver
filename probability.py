@@ -93,6 +93,7 @@ class probability():
 		
           elif count < self.player.GetCellInfo(w, h):
             self.renew_target()
+            return None
 						
   def OpenSafe(self):
     for w in range(self.W):
@@ -126,6 +127,7 @@ class probability():
 		
           elif count > self.player.GetCellInfo(w, h):
             self.renew_target()
+            return None
 	
   def count_patterns(self):
     left_B = self.B - self.flag_sum - self.target[1].count(1) - self.target[1].count(2)
