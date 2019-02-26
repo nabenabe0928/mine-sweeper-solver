@@ -14,14 +14,23 @@ class MineSweeper():
     self.clear = False
 
   def start(self, x, y):
+	
+    # when opening first panel, you have to call start and specify which position you would like to open.
     ard = self.around(x, y)
+	
+    # first, get the array filled with rondom number whose size is same as the field itself.
     place_bomb = np.array([random.random() for i in range(self.width * self.height)])
+ 
+    # order the random number in the array and just get the arguments of this array.
     order = np.argsort(place_bomb)
     bomb_place = []
 
     b = 0
     t = 0
     while b < self.B:
+      # get the (t + 1)-th minimum random number in the place_bomb array
+      # if the position of order[t] is corresponds to the panel where you firstly choose at start,
+      # then you will remove the t from the bomb candidates and see next candidates.
       bomb_candidate = self.num_to_position(order[t])
 
       if not bomb_candidate in ard and bomb_candidate != [x, y]:
