@@ -115,7 +115,7 @@ if __name__ == "__main__":
     """
     n_win = 0
     n_game = 100
-    difficulty = 2
+    difficulty = 0
 
     for n in range(n_game):
         player = MineSweeper(difficulty)

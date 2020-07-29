@@ -1,6 +1,86 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+template <typename A, typename B>
+string to_string(pair<A, B> p);
+template <typename A, typename B, typename C>
+string to_string(tuple<A, B, C> p);
+template <typename A, typename B, typename C, typename D>
+string to_string(tuple<A, B, C, D> p);
+string to_string(const string& s) {return '"' + s + '"';}
+string to_string(char c){return string(1, c);}
+string to_string(const char* s) {return to_string((string) s);}
+string to_string(bool b){return (b ? "true" : "false");}
+template <typename A, typename B>
+string to_string(pair<A, B> p){return "(" + to_string(p.first) + ", " + to_string(p.second) + ")";}
+template <typename A, typename B, typename C>
+string to_string(tuple<A, B, C> p){return "(" + to_string(get<0>(p)) + ", " + to_string(get<1>(p)) + ", " + to_string(get<2>(p)) + ")";}
+template <typename A, typename B, typename C, typename D>
+string to_string(tuple<A, B, C, D> p){return "(" + to_string(get<0>(p)) + ", " + to_string(get<1>(p)) + ", " + to_string(get<2>(p)) + ", " + to_string(get<3>(p)) + ")";}
+string to_string(vector<bool> v) {
+  bool first = true;
+  string res = "{";
+  for (int i = 0; i < static_cast<int>(v.size()); i++) {
+    if (!first) res += ", ";
+    first = false;
+    res += to_string(v[i]);
+  }
+  res += "}";
+  return res;
+}
+
+template <size_t N>
+string to_string(bitset<N> v) {
+  string res = "";
+  for (size_t i = 0; i < N; i++) res += static_cast<char>('0' + v[i]);
+  return res;
+}
+
+template <typename A>
+string to_string(A v) {
+    bool first = true;
+    string res = "{";
+    for (const auto &x : v) {
+        if (!first) {
+            res += ", ";
+        }
+        first = false;
+        res += to_string(x);
+    }
+    res += "}";
+    return res;
+}
+
+template<typename T>
+string to_string(priority_queue<T>& q){
+    priority_queue<T> copy;
+    bool first = true;
+    string res = "{";
+    while(!q.empty()){
+        if (!first) {
+            res += ", ";
+        }
+        first = false;
+        res += to_string(q.top());
+        copy.push(q.top());
+        q.pop();
+    }
+
+    swap(q, copy);
+    res += "}";
+    return res;
+}
+
+void debug_out() {cerr << endl;}
+
+template <typename Head, typename... Tail>
+void debug_out(Head H, Tail... T){
+    cerr << " " << to_string(H);
+    debug_out(T...);
+}
+
+#define debug(...) cerr << "[" << #__VA_ARGS__ << "]:", debug_out(__VA_ARGS__)
+
 std::mt19937 create_rand_engine(){
     std::random_device rnd;
     std::vector<std::uint_least32_t> v(10);
@@ -11,7 +91,7 @@ std::mt19937 create_rand_engine(){
 
 vector<int> generate_unique_array(const size_t sz, int start, int end){
     const size_t range = static_cast<size_t>(start - end + 1);
-    const size_t num = static_cast<size_t>(sz * 1.2);
+    const size_t num = static_cast<size_t>(sz);
 
     vector<int> ret;
     auto engine = create_rand_engine();
@@ -21,11 +101,6 @@ vector<int> generate_unique_array(const size_t sz, int start, int end){
         while (ret.size() < num) ret.push_back(distribution(engine));
         sort(ret.begin(), ret.end());
         auto unique_end = unique(ret.begin(), ret.end());
-
-        if (sz < distance(ret.begin(), unique_end)){
-            unique_end = next(ret.begin(), sz);
-        }
-
         ret.erase(unique_end, ret.end());
     }
 
@@ -35,6 +110,8 @@ vector<int> generate_unique_array(const size_t sz, int start, int end){
 struct MineSweeper{
     int W, H, B, Difficulty, n_closed;
     vector<int> field, cell;
+    vector<vector<int>> each_neighbors;
+    vector<bool> visited;
     bool clear, over;
 
     MineSweeper(int diff){
@@ -45,6 +122,10 @@ struct MineSweeper{
         n_closed = W * H;
         field = vector<int>(W * H, 0);
         cell = vector<int>(W * H, -1);
+        each_neighbors = vector<vector<int>>(W * H);
+        for (int x = 0; x < W; x++) for (int y = 0; y < H; y++)
+            _get_neighbors(x, y);
+        visited = vector<bool>(W * H, false);
         clear = over = false;
     }
 
@@ -96,90 +177,227 @@ struct MineSweeper{
         cout << "" << endl;
     }
 
+    void _search_neighbors(int num, queue<int>& cells_to_open){
+        visited[num] = true;
+
+        for (int neighbor: each_neighbors[num]){
+            if (cell[neighbor] == -1 && !visited[neighbor]){
+                cell[neighbor] = field[neighbor];
+                n_closed--;
+                if (!cell[neighbor]) cells_to_open.push(neighbor);
+            }
+        }
+    }
+
+    void _open_all_zero_cells(int num){
+        queue<int> cells_to_open;
+        cells_to_open.push(num);
+        fill(visited.begin(), visited.end(), false);
+
+        while (!cells_to_open.empty()){
+            int num = cells_to_open.front();
+            cells_to_open.pop();
+            _search_neighbors(num, cells_to_open);
+        }
+    }
+
     void open(int x, int y){
         int num = _position_to_num(x, y);
+        if (cell[num] != -1) return;
         cell[num] = field[num];
         n_closed--;
         if (cell[num] == -2) over = true;
-
-        queue<pair<int, int>> q;
-        q.push({x, y});
-        while (!q.empty()){
-            
-        }
-        /*
-        BFS Here
-        */
-
-        if (n_closed == B) clear = true;
+        if (n_closed == B) clear = true && !over;
+        if (!cell[num]) _open_all_zero_cells(num);
         _plot_field();
     }
 
-    vector<int> _get_neighbors(int x, int y){
-        vector<int> neighbors;
+    void _get_neighbors(int x, int y){
+        int num = _position_to_num(x, y);
         for (int dx = -1; dx <= 1; dx++){
-            for (int dy = -1; dy <= 1; dy++){
-                if (!out_of_field(x + dx, y + dy))
-                    neighbors.push_back(_position_to_num(x + dx, y + dy));
-            }
+            for (int dy = -1; dy <= 1; dy++)
+                if (!out_of_field(x + dx, y + dy) && (dx != 0 || dy != 0))
+                    each_neighbors[num].push_back(_position_to_num(x + dx, y + dy));
         }
-        return neighbors;
     }
 
-    vector<int> _fill_bombs(vector<int>& not_here){
+    vector<int> _fill_bombs(int x, int y){
+        int num = _position_to_num(x, y);
         vector<int> bombs, rnd = generate_unique_array(B + 10, 0, W * H - 1);
         for (int i = 0; bombs.size() < B; i++){
             bool ok = true;
-            for (int n: not_here){
+            for (int n: each_neighbors[num]){
                 if (n == rnd[i]){
                     ok = false;
                     break;
                 }
             }
-            if (ok) bombs.push_back(rnd[i]);
+            if (ok && rnd[i] != num) bombs.push_back(rnd[i]);
         }
         return bombs;
     }
 
     int _bomb_count(int x, int y){
-        vector<int> neighbors = _get_neighbors(x, y);
         int num = _position_to_num(x, y);
         if (field[num] == -2) return -2;
 
         int count = 0;
-        for (int neighbor: neighbors){
-            if (num == neighbor) continue;
+        for (int neighbor: each_neighbors[num])
             if (field[neighbor] == -2) count++;
-        }
+
         return count;
     }
 
     void _initialize_field(vector<int>& bombs){
         for (int b: bombs) field[b] = -2;
         for (int x = 0; x < W; x++){
-            for (int y = 0; y < H; y++){
+            for (int y = 0; y < H; y++)
                 field[_position_to_num(x, y)] = _bomb_count(x, y);
-            }
         }
 
         for (int x = 0; x < W; x++){
-            for (int y = 0; y < H; y++){
+            for (int y = 0; y < H; y++)
                 field[_position_to_num(x, y)] = _bomb_count(x, y);
-            }
         }
     }
 
     void start(int x, int y){
-        vector<int> neighbors = _get_neighbors(x, y);
-        vector<int> bombs = _fill_bombs(neighbors);
+        vector<int> bombs = _fill_bombs(x, y);
         _initialize_field(bombs);
         open(x, y);
     }
 };
 
-int main(void){
-    MineSweeper m(2);
-    m.start(5, 5);
+struct Game{
+    MineSweeper player;
+    int W, H;
+    vector<vector<int>> each_neighbors;
+    vector<bool> Flag, Safe;
+    vector<int> closed;
 
+    Game(MineSweeper player): player(player){
+        W = player.W;
+        H = player.H;
+        Flag = Safe = vector<bool>(W * H, false);
+        closed = vector<int>(W * H);
+        each_neighbors = player.each_neighbors;
+    }
+
+    void _construct_flags(int x, int y, vector<int>& cell, vector<bool>& flag){
+        int count = 0;
+        int num = player._position_to_num(x, y);
+        for (int neighbor: each_neighbors[num])
+            if (cell[neighbor] == -1) count++;
+
+        if (count == cell[num]){
+            for (int neighbor: each_neighbors[num])
+                if (cell[neighbor] == -1) flag[neighbor] = true;
+        }
+    }
+
+    void GetFlag(){
+        for (int x = 0; x < W; x++){
+            for (int y = 0; y < H; y++)
+                if (player.GetCellInfo(x, y) != -1)
+                    _construct_flags(x, y, player.cell, Flag);
+        }
+    }
+
+    bool _open_safe_neighbors(int x, int y, vector<int>& cell, vector<bool>& flag, vector<bool>& safe){
+        int count = 0;
+        int num = player._position_to_num(x, y);
+        for (int neighbor: each_neighbors[num])
+            if (flag[neighbor]) count++;
+
+        bool opened = false;
+        if (count == cell[num]){
+            for (int neighbor: each_neighbors[num]){
+                int x2, y2;
+                tie(x2, y2) = player._num_to_position(neighbor);
+                if (!flag[neighbor] && cell[neighbor] == -1)
+                    safe[neighbor] = true, opened = true;
+            }
+        }
+        return opened;
+    }
+
+    bool OpenSafe(){
+        bool opened = false;
+        for (int x = 0; x < W; x++){
+            for (int y = 0; y < H; y++)
+                if (player.GetCellInfo(x, y) != -1)
+                    opened = opened | _open_safe_neighbors(x, y, player.cell, Flag, Safe);
+        }
+        return opened;
+    }
+
+    bool contradiction(){
+        return true;
+    }
+
+    void _compute_probability(int idx, int sz, int n_surrounded, vector<bool>& flag, vector<bool>& safe){
+        if (contradiction()) return;
+        if (idx == sz){
+            // add
+            return;
+        }
+
+        int num = closed[idx];
+        
+        flag[num] = true;
+        _compute_probability(idx + 1, sz, n_surrounded, flag, safe);
+        flag[num] = false;
+        safe[num] = true;
+        _compute_probability(idx + 1, sz, n_surrounded, flag, safe);
+        safe[num] = false;
+    }
+
+    bool isSurrounded(int num){
+        for (int neighbor: each_neighbors[num])
+            if (player.cell[neighbor] != -1)
+                return false;
+        return true;
+    }
+
+    bool start(){
+        player.start(W / 2, H / 2);
+        vector<bool> flag_sim(W * H), safe_sim(W * H);
+
+        while (!player.over && !player.clear){
+            GetFlag();
+            if (!OpenSafe()){
+                flag_sim = Flag, safe_sim = Safe;
+                int sz = 0, n_surrounded = 0;
+                for (int i = 0; i < W * H; i++)
+                    if (player.cell[i] == -1){
+                        if (isSurrounded(i)) n_surrounded++;
+                        else closed[sz++] = i;
+                    }
+                _compute_probability(0, sz, n_surrounded, flag_sim, safe_sim);
+            }else{
+                for (int i = 0; i < W * H; i++){
+                    int x, y;
+                    tie(x, y) = player._num_to_position(i);
+                    if (Safe[i]) player.open(x, y);
+                }
+            }
+        }
+
+        return !player.over;
+    }
+};
+
+int main(void){
+    int n_win = 0, n_game = 1, difficulty = 0;
+    
+    for (int i = 0; i < n_game; i++){
+        MineSweeper player = MineSweeper(difficulty);
+        Game game(player);
+        n_win += game.start();
+        cout << i + 1 << ": " << "winning " << n_win << "\n" <<endl;
+    }
+
+    double rate = 100.0 * double(n_win) / double(n_game);
+    cout << "winning rate: " << rate << " %" << endl;
     return 0;
 }
