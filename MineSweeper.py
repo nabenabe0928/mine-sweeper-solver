@@ -99,12 +99,6 @@ class MineSweeper():
             self.clear = True
         self.PlotField()
 
-    def SearchAround(self, x, y):
-        around = self.around(x, y)
-        for p in around:
-            if self.field[p[1]][p[0]] == 0:
-                self.cell[p[1]][p[0]] = 0
-
     def open_around_zero(self):
         for h in range(self.height):
             for w in range(self.width):
