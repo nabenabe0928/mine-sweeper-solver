@@ -116,6 +116,8 @@ if __name__ == "__main__":
     n_win = 0
     n_game = 100
     difficulty = 0
+    import time
+    s = time.time()
 
     for n in range(n_game):
         player = MineSweeper(difficulty)
@@ -124,3 +126,4 @@ if __name__ == "__main__":
         print("")
 
     print("winning rate: {:.3f} %".format(100 * float(n_win) / float(n_game)))
+    print(time.time() - s)
