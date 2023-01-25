@@ -1,1 +1,9 @@
 **/__pycache__/
+**/.mypy_cache/
+**/fig/
+**/figs/
+**/incumbents/
+**/log/
+**/out/
+**/results/
+**/.ipynb_checkpoints/

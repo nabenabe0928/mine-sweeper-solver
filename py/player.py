@@ -115,13 +115,13 @@ if __name__ == "__main__":
     hard    42/100
     """
     n_win = 0
-    n_game = 100
-    difficulty = 0
+    n_game = 30
+    difficulty = 1
     import time
     s = time.time()
 
     for n in range(n_game):
-        player = MineSweeper(difficulty)
+        player = MineSweeper(difficulty, seed=n)
         n_win += main(player)
         print("{}: winning {}".format(n + 1, n_win))
         print("")

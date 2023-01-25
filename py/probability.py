@@ -16,7 +16,7 @@ class probability():
         self.player = player
         self.flag = copy.deepcopy(flag)
         self.flag_sum = sum([f.count(True) for f in flag])
-        self.B = self.player.B
+        self._n_mines = self.player._n_mines
         self.W = player.width
         self.H = player.height
         self.countL = 0
@@ -109,7 +109,7 @@ class probability():
                         return None
 
     def count_patterns(self):
-        left_B = self.B - self.flag_sum - self.target[1].count(1) - self.target[1].count(2)
+        left_B = self._n_mines - self.flag_sum - self.target[1].count(1) - self.target[1].count(2)
         patterns = combination(self.L, left_B)
         self.countL += combination(self.L - 1, left_B - 1)
         self.count += patterns
