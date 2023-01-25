@@ -1,7 +1,8 @@
-from MineSweeper import MineSweeper
-from probability import probability
 import math
 import numpy as np
+
+from mine_sweeper import MineSweeper
+from probability import probability
 
 
 class _game():
