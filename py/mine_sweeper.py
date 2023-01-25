@@ -1,5 +1,6 @@
 from collections import deque
-from typing import List, Literal, Optional
+from copy import deepcopy
+from typing import List, Literal, Optional, Tuple
 
 import numpy as np
 
@@ -55,8 +56,8 @@ class MineSweeper:
         self._cell_state = -1 * np.ones(self.height * self.width, dtype=np.int32)
         self._neighbors = [
             np.asarray([
-                self._loc2idx(y, x)
-                for (y, x) in self._idx2loc(i) + DIRS
+                self.loc2idx(y, x)
+                for (y, x) in self.idx2loc(i) + DIRS
                 if not self._out_of_field(y, x)
             ])
             for i in range(self.height * self.width)
@@ -80,9 +81,34 @@ class MineSweeper:
     def clear(self) -> bool:
         return self._clear
 
+    @property
+    def cell_state(self) -> np.ndarray:
+        return deepcopy(self._cell_state)
+
+    @property
+    def neighbors(self) -> List[np.ndarray]:
+        return deepcopy(self._neighbors)
+
+    def __getitem__(self, loc: Tuple[int, int]) -> int:
+        y, x = loc
+        return self._cell_state[self.loc2idx(y, x)]
+
+    def loc2idx(self, y: int, x: int) -> int:
+        return self.width * y + x
+
+    def idx2loc(self, idx: int) -> np.ndarray:
+        return np.asarray([idx // self.width, idx % self.width])
+
+    def plot_field(self) -> None:
+        self._print_judge()
+        for y in range(self.height):
+            s = " ".join([self._convert_string(y, x) for x in range(self.width)])
+            print(s)
+        print("")
+
     def start(self, y: int, x: int) -> None:
         # when opening first panel, you have to call start and specify which position you would like to open.
-        idx = self._loc2idx(y, x)
+        idx = self.loc2idx(y, x)
         non_neighbors = np.setdiff1d(
             np.arange(self.width * self.height),
             np.append(self._neighbors[idx], idx),
@@ -100,7 +126,7 @@ class MineSweeper:
         self.open(y, x)
 
     def open(self, y: int, x: int) -> None:
-        idx = self._loc2idx(y, x)
+        idx = self.loc2idx(y, x)
         self._cell_state[idx] = self._field[idx]
         if self._cell_state[idx] == -2:
             self._over = True
@@ -120,16 +146,6 @@ class MineSweeper:
             self._cell_state[neighbor_indices] = self._field[neighbor_indices]
             q.extend([i for i in neighbor_indices[closed] if self._cell_state[i] == 0])
 
-    def GetCellInfo(self, y: int, x: int) -> int:
-        return self._cell_state[self._loc2idx(y, x)]
-
-    def plot_field(self) -> None:
-        self._print_judge()
-        for y in range(self.height):
-            s = " ".join([self._convert_string(y, x) for x in range(self.width)])
-            print(s)
-        print("")
-
     def _print_judge(self) -> None:
         if self._over:
             print("*******************")
@@ -143,19 +159,13 @@ class MineSweeper:
             print("")
 
     def _convert_string(self, y: int, x: int) -> str:
-        idx = self._loc2idx(y, x)
+        idx = self.loc2idx(y, x)
         if self._cell_state[idx] == -1:
             return "x"
         elif self._field[idx] >= 0 and self._cell_state[idx] >= 0:
             return str(self._cell_state[idx])
         else:
             return "@"
-
-    def _loc2idx(self, y: int, x: int) -> int:
-        return self.width * y + x
-
-    def _idx2loc(self, idx: int) -> np.ndarray:
-        return np.asarray([idx // self.width, idx % self.width])
 
     def _out_of_field(self, y: int, x: int) -> bool:
         return not (0 <= x < self.width and 0 <= y < self.height)

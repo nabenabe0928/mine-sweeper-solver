@@ -1,91 +1,103 @@
-import math
+from typing import Tuple
+
 import numpy as np
 
 from mine_sweeper import MineSweeper
 from probability import probability
 
 
-class _game():
-    def __init__(self, player):
-        self.player = player
-        self.W = player.width
-        self.H = player.height
-        self.flag = [[False for h in range(self.H)] for w in range(self.W)]
-        self.n_open = self.W * self.H
+class Player:
+    def __init__(self, field: MineSweeper):
+        self._field = field
+        self._W = field.width
+        self._H = field.height
+        self.n_open = 0
+        self._neighbors = self._field.neighbors
+        self._flags = np.zeros(self._W * self._H, dtype=np.bool8)
+        self._n_cells = field.width * field.height
 
-    def GetFlag(self):
-        for w in range(self.W):
-            for h in range(self.H):
-                if self.player.GetCellInfo(w, h) != -1:
-                    count = 0
-                    around = self.player.around(w, h)
-                    for a in around:
-                        if self.player.GetCellInfo(a[0], a[1]) == -1:
-                            count += 1
+    @property
+    def W(self) -> int:
+        return self._W
 
-                    if count == self.player.GetCellInfo(w, h):
-                        for a in around:
-                            if self.player.GetCellInfo(a[0], a[1]) == -1:
-                                self.flag[a[0]][a[1]] = True
+    @property
+    def H(self) -> int:
+        return self._H
 
-    def OpenSafe(self):
-        for w in range(self.W):
-            for h in range(self.H):
-                if self.player.GetCellInfo(w, h) != -1:
-                    count = 0
-                    around = self.player.around(w, h)
-                    for a in around:
-                        if self.flag[a[0]][a[1]]:
-                            count += 1
+    @property
+    def over(self) -> bool:
+        return self._field.over
 
-                    if count == self.player.GetCellInfo(w, h):
-                        for a in around:
-                            if not self.flag[a[0]][a[1]] and self.player.GetCellInfo(a[0], a[1]) == -1:
-                                self.player.open(a[0], a[1])
+    @property
+    def clear(self) -> bool:
+        return self._field.clear
 
-    def cannot_open(self):
-        n_open = 0
-        for w in range(self.W):
-            for h in range(self.H):
-                if self.player.GetCellInfo(w, h) >= 0:
-                    n_open += 1
+    def start(self, y: int, x: int) -> None:
+        self._field.start(y, x)
 
-        if n_open == self.n_open:
+    def idx2loc(self, idx: int) -> Tuple[int, int]:
+        return self._field.idx2loc(idx)
+
+    def build_flag(self) -> None:
+        cell_state = self._field.cell_state
+        cell_opened = (cell_state != -1)
+        target_indices = np.arange(self._n_cells)[cell_state > 0]
+        for idx in target_indices:
+            neighbor_indices = self._neighbors[idx]
+            neighbors_closed = ~(cell_opened[neighbor_indices])
+            n_closed = np.count_nonzero(neighbors_closed)
+            if cell_state[idx] == n_closed:
+                self._flags[neighbor_indices[neighbors_closed]] = True
+
+    def open_safe_cells(self) -> None:
+        cell_state = self._field.cell_state
+        cell_opened = (cell_state != -1)
+        target_indices = np.arange(self._n_cells)[cell_opened]
+        for idx in target_indices:
+            neighbor_indices = self._neighbors[idx]
+            n_flags = np.count_nonzero(self._flags[neighbor_indices])
+            if cell_state[idx] != n_flags:
+                continue
+
+            for target_idx in neighbor_indices:
+                if not self._flags[target_idx] and not cell_opened[target_idx]:
+                    y, x = self._field.idx2loc(target_idx)
+                    self._field.open(y, x)
+
+    def opened_any(self) -> bool:
+        cell_state = self._field.cell_state
+        n_open = np.count_nonzero(cell_state >= 0)
+        if n_open != self.n_open:
+            self.n_open = n_open
             return True
         else:
-            self.n_open = n_open
             return False
 
-    def num_to_position(self, num):
-        h = math.floor(num / self.W)
-        w = num - (self.W * h)
-        return [w, h]
-
-    def open_land(self):
-        for w in range(self.W):
-            for h in range(self.H):
-                if self.player.GetCellInfo(w, h) == -1:
-                    land = True
-                    around = self.player.around(w, h)
-                    for a in around:
-                        if self.player.GetCellInfo(a[0], a[1]) != -1:
-                            land = False
-                    if land:
-                        self.player.open(w, h)
-                        return None
+    def open_land(self) -> None:
+        cell_state = self._field.cell_state
+        cell_closed = (cell_state == -1)
+        closed_indices = np.arange(self._n_cells)[cell_closed]
+        for idx in closed_indices:
+            neighbor_indices = self._neighbors[idx]
+            n_closed = np.count_nonzero(cell_closed[neighbor_indices])
+            if n_closed == neighbor_indices.size:
+                y, x = self.idx2loc(idx)
+                self._field.open(y, x)
+                return
 
 
-def main(player):
-    game = _game(player)
-    game.player.start(int(game.W / 2), int(game.H / 2))
-    game.GetFlag()
-    game.OpenSafe()
+def main(field: MineSweeper) -> bool:
+    player = Player(field)
+    player.start(player.H // 2, player.W // 2)
 
-    while not game.player.over and not game.player.clear:
-        game.GetFlag()
-        game.OpenSafe()
+    while not player.over and not player.clear:
+        player.build_flag()
+        player.open_safe_cells()
+        if not player.opened_any():
+            player.open_land()
 
-        if game.cannot_open():
+        """
+        if not player.opened_any():
             prob = probability(game.player, game.flag)
             target, p_land = prob.searching()
             print(target, p_land)
@@ -104,8 +116,9 @@ def main(player):
                 game.player.open(position[0], position[1])
             else:
                 game.open_land()
+        """
 
-    return game.player.clear
+    return player.clear
 
 
 if __name__ == "__main__":
@@ -114,17 +127,17 @@ if __name__ == "__main__":
     normal 823/1000
     hard    42/100
     """
-    n_win = 0
-    n_game = 30
-    difficulty = 1
     import time
+
     s = time.time()
+    n_win = 0
+    n_games = 100
+    difficulty = 1
 
-    for n in range(n_game):
-        player = MineSweeper(difficulty, seed=n)
-        n_win += main(player)
-        print("{}: winning {}".format(n + 1, n_win))
-        print("")
+    for n in range(n_games):
+        field = MineSweeper(difficulty, seed=n)
+        n_win += main(field)
+        print(f"{n + 1}: winning {n_win}\n")
 
-    print("winning rate: {:.3f} %".format(100 * float(n_win) / float(n_game)))
+    print(f"winning rate: {100 * n_win / n_games:.3f} %")
     print(time.time() - s)
