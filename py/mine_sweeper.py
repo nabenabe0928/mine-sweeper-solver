@@ -74,6 +74,10 @@ class MineSweeper:
         return self._height
 
     @property
+    def n_mines(self) -> int:
+        return self._n_mines
+
+    @property
     def over(self) -> bool:
         return self._over
 

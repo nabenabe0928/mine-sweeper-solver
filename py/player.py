@@ -3,15 +3,32 @@ from typing import Tuple
 import numpy as np
 
 from mine_sweeper import MineSweeper
-from probability import probability
+from probability import ProbabilityCalculator
 
 
 class Player:
     def __init__(self, field: MineSweeper):
+        """
+        Attributes:
+            field (MineSweeper):
+                The mine sweeper field instance.
+            H (int):
+                The height of the field.
+            W (int):
+                The width of the field.
+            n_open (int):
+                The number of opened cells.
+            neighbors (List[np.ndarray]):
+                The indices of neighbors in each cell.
+            flags (np.ndarray):
+                The flag whether the corresponding cell has a mine or not.
+            n_cells (int):
+                The field size.
+        """
         self._field = field
         self._W = field.width
         self._H = field.height
-        self.n_open = 0
+        self._n_open = 0
         self._neighbors = self._field.neighbors
         self._flags = np.zeros(self._W * self._H, dtype=np.bool8)
         self._n_cells = field.width * field.height
@@ -67,8 +84,8 @@ class Player:
     def opened_any(self) -> bool:
         cell_state = self._field.cell_state
         n_open = np.count_nonzero(cell_state >= 0)
-        if n_open != self.n_open:
-            self.n_open = n_open
+        if n_open != self._n_open:
+            self._n_open = n_open
             return True
         else:
             return False
