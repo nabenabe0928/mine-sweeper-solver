@@ -1,6 +1,10 @@
-from typing import Literal, Optional
+from collections import deque
+from typing import List, Literal, Optional
 
 import numpy as np
+
+
+DIRS = np.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
 
 
 class MineSweeper:
@@ -27,18 +31,36 @@ class MineSweeper:
                 The height of the field.
             n_mines (int):
                 The number of mines in the field.
-            field (List[List[int]]):
+            field (np.ndarray):
                 The ground truth of each cell.
+                    -2: A mine.
                     0: No mines around this cell.
                     1--8: The corresponding number of mines exist around this cell.
+                The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
+            cell_state (np.ndarray):
+                The state of each cell.
+                    -2: A mine.
+                    -1: Closed.
+                    0: No mines around this cell.
+                    1--8: The corresponding number of mines exist around this cell.
+                The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
+            neighbors (List[np.ndarray]):
+                The indices of neighbors in each cell.
         """
         self._rng = np.random.RandomState(seed)
         self._width = [9, 16, 30][difficulty]
         self._height = [9, 16, 16][difficulty]
         self._n_mines = [10, 40, 100][difficulty]
-        self._field = [[0 for w in range(self.width)] for h in range(self.height)]
-        self.cell = [[-1 for w in range(self.width)] for h in range(self.height)]
-        self.zero = [[False for w in range(self.width)] for h in range(self.height)]
+        self._field = np.zeros(self.height * self.width, dtype=np.int32)
+        self._cell_state = -1 * np.ones(self.height * self.width, dtype=np.int32)
+        self._neighbors = [
+            np.asarray([
+                self._loc2idx(y, x)
+                for (y, x) in self._idx2loc(i) + DIRS
+                if not self._out_of_field(y, x)
+            ])
+            for i in range(self.height * self.width)
+        ]
         self._over = False
         self._clear = False
 
@@ -58,119 +80,57 @@ class MineSweeper:
     def clear(self) -> bool:
         return self._clear
 
-    def start(self, x, y):
+    def start(self, y: int, x: int) -> None:
         # when opening first panel, you have to call start and specify which position you would like to open.
-        ard = self.around(x, y)
-        # first, get the array filled with rondom number whose size is same as the field itself.
-        place_bomb = self._rng.random(size=self.width * self.height)
-        # order the random number in the array and just get the arguments of this array.
-        order = np.argsort(place_bomb)
-        bomb_place = []
+        idx = self._loc2idx(y, x)
+        non_neighbors = np.setdiff1d(
+            np.arange(self.width * self.height),
+            np.append(self._neighbors[idx], idx),
+            assume_unique=True
+        )
+        mine_loc = self._rng.choice(non_neighbors, size=self._n_mines, replace=False)
+        self._field[mine_loc] = -2
 
-        b = 0
-        t = 0
-        while b < self._n_mines:
-            """
-            get the (t + 1)-th minimum random number in the place_bomb array
-            if the position of order[t] is corresponds to the panel where you firstly choose at start,
-            then you will remove the t from the bomb candidates and see next candidates.
-            """
-            bomb_candidate = self.num_to_position(order[t])
+        for i in range(self.height * self.width):
+            if self._field[i] == -2:
+                continue
 
-            if bomb_candidate not in ard and bomb_candidate != [x, y]:
-                self._field[bomb_candidate[1]][bomb_candidate[0]] = -2
-                b += 1
-                bomb_place.append(bomb_candidate)
+            self._field[i] = np.sum(self._field[self._neighbors[i]] == -2)
 
-            t += 1
+        self.open(y, x)
 
-        for h in range(self.height):
-            for w in range(self.width):
-                position = [w, h]
-                if position in bomb_place:
-                    continue
-                p = self.around(w, h)
-                count = 0
-
-                for pi in p:
-                    if self._field[pi[1]][pi[0]] == -2:
-                        count += 1
-                self._field[h][w] = count
-        self.open(x, y)
-
-    def count(self, array, value):
-        count = 0
-        for h in range(self.height):
-            for w in range(self.width):
-                if array[h][w] == value:
-                    count += 1
-        return count
-
-    def num_to_position(self, num):
-        h = num // self.width
-        w = num % self.width
-        return [w, h]
-
-    def out_of_field(self, x, y):
-        if x < 0 or x >= self.width or y < 0 or y >= self.height:
-            return True
-        else:
-            return False
-
-    def around(self, x, y):
-        ard = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
-        p = [[x + a[0], y + a[1]] for a in ard]
-
-        for i in range(len(p) - 1, -1, -1):
-            if self.out_of_field(p[i][0], p[i][1]):
-                del p[i]
-        return p
-
-    def open(self, x, y):
-        self.cell[y][x] = self._field[y][x]
-        if self.cell[y][x] == -2:
+    def open(self, y: int, x: int) -> None:
+        idx = self._loc2idx(y, x)
+        self._cell_state[idx] = self._field[idx]
+        if self._cell_state[idx] == -2:
             self._over = True
-        while self.count(self.zero, True) != self.count(self.cell, 0):
-            self.open_around_zero()
-        count = 0
 
-        for h in range(self.height):
-            for w in range(self.width):
-                if self.cell[h][w] == -1:
-                    count += 1
-
-        if count == self._n_mines and not self._over:
+        self._open_around_zero([idx] if self._cell_state[idx] == 0 else [])
+        n_close = np.count_nonzero(self._cell_state == -1)
+        if n_close == self._n_mines and not self._over:
             self._clear = True
         self.plot_field()
 
-    def open_around_zero(self):
-        for h in range(self.height):
-            for w in range(self.width):
-                if self.cell[h][w] == 0:
-                    self.zero[h][w] = True
-                    around = self.around(w, h)
-                    for a in around:
-                        self.cell[a[1]][a[0]] = self._field[a[1]][a[0]]
+    def _open_around_zero(self, new_zero_indices: List[int]) -> None:
+        q = deque(new_zero_indices)
+        while len(q) > 0:
+            idx = q.popleft()
+            neighbor_indices = self._neighbors[idx]
+            closed = self._cell_state[neighbor_indices] == -1
+            self._cell_state[neighbor_indices] = self._field[neighbor_indices]
+            q.extend([i for i in neighbor_indices[closed] if self._cell_state[i] == 0])
 
-    def GetCellInfo(self, x, y):
-        return self.cell[y][x]
+    def GetCellInfo(self, y: int, x: int) -> int:
+        return self._cell_state[self._loc2idx(y, x)]
 
-    def _convert_string(self, y: int, x: int) -> str:
-        if self.cell[y][x] == -1:
-            return "x"
-        elif self._field[y][x] >= 0 and self.cell[y][x] >= 0:
-            return str(self.cell[y][x])
-        else:
-            return "@"
-
-    def plot_field(self):
-        self.print_judge()
+    def plot_field(self) -> None:
+        self._print_judge()
         for y in range(self.height):
             s = " ".join([self._convert_string(y, x) for x in range(self.width)])
             print(s)
         print("")
 
-    def print_judge(self) -> None:
+    def _print_judge(self) -> None:
         if self._over:
             print("*******************")
             print("***  game over  ***")
@@ -181,3 +141,21 @@ class MineSweeper:
             print("*** game clear! ***")
             print("*******************")
             print("")
+
+    def _convert_string(self, y: int, x: int) -> str:
+        idx = self._loc2idx(y, x)
+        if self._cell_state[idx] == -1:
+            return "x"
+        elif self._field[idx] >= 0 and self._cell_state[idx] >= 0:
+            return str(self._cell_state[idx])
+        else:
+            return "@"
+
+    def _loc2idx(self, y: int, x: int) -> int:
+        return self.width * y + x
+
+    def _idx2loc(self, idx: int) -> np.ndarray:
+        return np.asarray([idx // self.width, idx % self.width])
+
+    def _out_of_field(self, y: int, x: int) -> bool:
+        return not (0 <= x < self.width and 0 <= y < self.height)
