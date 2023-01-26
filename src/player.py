@@ -3,8 +3,8 @@ from typing import Tuple
 
 import numpy as np
 
-from mine_sweeper import MineSweeper
-from probability import ProbabilityCalculator
+from src.mine_sweeper import MineSweeper
+from src.probability import ProbabilityCalculator
 
 
 class Player:
@@ -29,10 +29,10 @@ class Player:
         self._field = field
         self._W = field.width
         self._H = field.height
+        self._n_cells = field.width * field.height
         self._n_open = 0
         self._neighbors = self._field.neighbors
         self._flags = np.zeros(self._W * self._H, dtype=np.bool8)
-        self._n_cells = field.width * field.height
 
     @property
     def W(self) -> int:
@@ -54,20 +54,20 @@ class Player:
     def clear(self) -> bool:
         return self._field.clear
 
-    def start(self, y: int, x: int) -> None:
+    def _start(self, y: int, x: int) -> None:
         self._field.start(y, x)
 
-    def idx2loc(self, idx: int) -> Tuple[int, int]:
+    def _idx2loc(self, idx: int) -> Tuple[int, int]:
         return self._field.idx2loc(idx)
 
-    def add_flag(self, idx: int) -> None:
+    def _add_flag(self, idx: int) -> None:
         self._flags[idx] = True
 
-    def open(self, idx: int) -> None:
-        y, x = self.idx2loc(idx)
+    def _open(self, idx: int) -> None:
+        y, x = self._idx2loc(idx)
         self._field.open(y, x)
 
-    def build_flag(self) -> None:
+    def _build_flag(self) -> None:
         cell_state = self._field.cell_state
         cell_opened = (cell_state != -1)
         target_indices = np.arange(self._n_cells)[cell_state > 0]
@@ -78,10 +78,10 @@ class Player:
             if cell_state[idx] == n_closed:
                 self._flags[neighbor_indices[neighbors_closed]] = True
 
-    def open_safe_cells(self) -> None:
+    def _open_safe_cells(self) -> None:
         cell_state = self._field.cell_state
         cell_opened = (cell_state != -1)
-        target_indices = np.arange(self._n_cells)[cell_opened]
+        target_indices = np.arange(self._n_cells)[cell_state > 0]
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
             n_flags = np.count_nonzero(self._flags[neighbor_indices])
@@ -90,10 +90,9 @@ class Player:
 
             for target_idx in neighbor_indices:
                 if not self._flags[target_idx] and not cell_opened[target_idx]:
-                    y, x = self._field.idx2loc(target_idx)
-                    self._field.open(y, x)
+                    self._open(target_idx)
 
-    def opened_any(self) -> bool:
+    def _opened_any(self) -> bool:
         cell_state = self._field.cell_state
         n_open = np.count_nonzero(cell_state >= 0)
         if n_open != self._n_open:
@@ -102,7 +101,7 @@ class Player:
         else:
             return False
 
-    def open_land(self) -> None:
+    def _open_land(self) -> None:
         cell_state = self._field.cell_state
         cell_closed = (cell_state == -1)
         closed_indices = np.arange(self._n_cells)[cell_closed]
@@ -110,53 +109,32 @@ class Player:
             neighbor_indices = self._neighbors[idx]
             n_closed = np.count_nonzero(cell_closed[neighbor_indices])
             if n_closed == neighbor_indices.size:
-                y, x = self.idx2loc(idx)
-                self._field.open(y, x)
+                self._open(idx)
                 return
 
+    def _open_by_proba(self) -> None:
+        prob = ProbabilityCalculator(field=self._field, flags=self.flags)
+        target, p_land = prob.compute()
+        safe_cell_exist = np.count_nonzero(target.proba == 0.0)
 
-def main(field: MineSweeper) -> bool:
-    player = Player(field)
-    player.start(player.H // 2, player.W // 2)
+        if safe_cell_exist:
+            for idx, p in zip(target.index, target.proba):
+                if p == 0:
+                    self._open(idx)
+                elif p == 1:
+                    self._add_flag(idx)
+        elif target.proba.size != 0 and np.min(target.proba) < p_land:
+            self._open(target.index[np.argmin(target.proba)])
+        else:
+            self._open_land()
 
-    while not player.over and not player.clear:
-        player.build_flag()
-        player.open_safe_cells()
-        if not player.opened_any():
-            prob = ProbabilityCalculator(field=field, flags=player.flags)
-            target, p_land = prob.compute()
-            surely_no_mine_indices = target.index[target.proba == 0.0]
-            if surely_no_mine_indices.size > 0:
-                for idx, p in zip(target.index, target.proba):
-                    if p == 0:
-                        player.open(idx)
-                    elif p == 1:
-                        player.add_flag(idx)
-            elif target.proba.size != 0 and np.min(target.proba) < p_land:
-                player.open(target.index[np.argmin(target.proba)])
-            else:
-                player.open_land()
+    def solve(self) -> bool:
+        self._start(self.H // 2, self.W // 2)
 
-    return player.clear
+        while not self.over and not self.clear:
+            self._build_flag()
+            self._open_safe_cells()
+            if not self._opened_any():
+                self._open_by_proba()
 
-
-if __name__ == "__main__":
-    """
-    easy   950/1000
-    normal 823/1000
-    hard    42/100
-    """
-    import time
-
-    s = time.time()
-    n_win = 0
-    n_games = 1000
-    difficulty = 0
-
-    for n in range(n_games):
-        field = MineSweeper(difficulty, seed=n)
-        n_win += main(field)
-        print(f"{n + 1}: winning {n_win}\n")
-
-    print(f"winning rate: {100 * n_win / n_games:.3f} %")
-    print(time.time() - s)
+        return self.clear

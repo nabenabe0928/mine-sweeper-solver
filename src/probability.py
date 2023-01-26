@@ -3,7 +3,7 @@ from enum import IntEnum
 from typing import Dict, Tuple
 import numpy as np
 
-from mine_sweeper import MineSweeper
+from src.mine_sweeper import MineSweeper
 
 
 @dataclass

@@ -1,11 +1,18 @@
 from collections import deque
 from copy import deepcopy
+from enum import IntEnum
 from typing import List, Literal, Optional, Tuple
 
 import numpy as np
 
 
 DIRS = np.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
+
+
+class Difficulties(IntEnum):
+    easy = 0
+    medium = 1
+    hard = 2
 
 
 class MineSweeper:
@@ -103,13 +110,6 @@ class MineSweeper:
     def idx2loc(self, idx: int) -> np.ndarray:
         return np.asarray([idx // self.width, idx % self.width])
 
-    def plot_field(self) -> None:
-        self._print_judge()
-        for y in range(self.height):
-            s = " ".join([self._convert_string(y, x) for x in range(self.width)])
-            print(s)
-        print("")
-
     def start(self, y: int, x: int) -> None:
         # when opening first panel, you have to call start and specify which position you would like to open.
         idx = self.loc2idx(y, x)
@@ -149,6 +149,13 @@ class MineSweeper:
             closed = self._cell_state[neighbor_indices] == -1
             self._cell_state[neighbor_indices] = self._field[neighbor_indices]
             q.extend([i for i in neighbor_indices[closed] if self._cell_state[i] == 0])
+
+    def plot_field(self) -> None:
+        self._print_judge()
+        for y in range(self.height):
+            s = " ".join([self._convert_string(y, x) for x in range(self.width)])
+            print(s)
+        print("")
 
     def _print_judge(self) -> None:
         if self._over:
