@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Tuple
 
 import numpy as np
@@ -42,6 +43,10 @@ class Player:
         return self._H
 
     @property
+    def flags(self) -> np.ndarray:
+        return deepcopy(self._flags)
+
+    @property
     def over(self) -> bool:
         return self._field.over
 
@@ -54,6 +59,13 @@ class Player:
 
     def idx2loc(self, idx: int) -> Tuple[int, int]:
         return self._field.idx2loc(idx)
+
+    def add_flag(self, idx: int) -> None:
+        self._flags[idx] = True
+
+    def open(self, idx: int) -> None:
+        y, x = self.idx2loc(idx)
+        self._field.open(y, x)
 
     def build_flag(self) -> None:
         cell_state = self._field.cell_state
@@ -111,29 +123,19 @@ def main(field: MineSweeper) -> bool:
         player.build_flag()
         player.open_safe_cells()
         if not player.opened_any():
-            player.open_land()
-
-        """
-        if not player.opened_any():
-            prob = probability(game.player, game.flag)
-            target, p_land = prob.searching()
-            print(target, p_land)
-
-            if 0 in target[2]:
-                for i, tar in enumerate(target[2]):
-                    if tar == 0:
-                        position = game.num_to_position(target[0][i])
-                        game.player.open(position[0], position[1])
-                    elif tar == 1:
-                        position = game.num_to_position(target[0][i])
-                        game.flag[position[0]][position[1]] = True
-
-            elif len(target[2]) != 0 and min(target[2]) < p_land:
-                position = game.num_to_position(target[0][np.argmin(target[2])])
-                game.player.open(position[0], position[1])
+            prob = ProbabilityCalculator(field=field, flags=player.flags)
+            target, p_land = prob.compute()
+            surely_no_mine_indices = target.index[target.proba == 0.0]
+            if surely_no_mine_indices.size > 0:
+                for idx, p in zip(target.index, target.proba):
+                    if p == 0:
+                        player.open(idx)
+                    elif p == 1:
+                        player.add_flag(idx)
+            elif target.proba.size != 0 and np.min(target.proba) < p_land:
+                player.open(target.index[np.argmin(target.proba)])
             else:
-                game.open_land()
-        """
+                player.open_land()
 
     return player.clear
 
@@ -148,8 +150,8 @@ if __name__ == "__main__":
 
     s = time.time()
     n_win = 0
-    n_games = 100
-    difficulty = 1
+    n_games = 1000
+    difficulty = 0
 
     for n in range(n_games):
         field = MineSweeper(difficulty, seed=n)
