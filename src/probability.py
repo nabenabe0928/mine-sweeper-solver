@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 import numpy as np
 
 
@@ -21,14 +21,36 @@ COMBINATION = np.array([combination(i) for i in range(SIZE)])
 
 @dataclass
 class TargetData:
+    """
+    Attributes:
+        index (np.ndarray):
+            The indices of the target cells to check.
+        state (np.ndarray):
+            The states of each cell.
+        count (np.ndarray):
+            The counts of how many times each cell has a mine.
+        proba (np.ndarray):
+            The probability of each cell having a mine.
+    """
     index: np.ndarray
     state: np.ndarray
     count: np.ndarray
     proba: np.ndarray
-    rev: Dict[int, int]
 
 
 class CellStates(IntEnum):
+    """
+    Attributes:
+        safe (int):
+            The cell does not have a mine.
+        mine (int):
+            The cell has a mine and this conclusion could be drawn
+            from the association with other cells.
+        assumed_mine (int):
+            The cell has a mine and this is just an assumption.
+        none (int):
+            The cell does not have any definition yet.
+    """
     safe = 0
     mine = 1
     assumed_mine = 2
@@ -61,6 +83,30 @@ class ProbabilityCalculator:
         neighbors: List[np.ndarray],
         n_mines: int,
     ):
+        """
+        Attributes:
+            is_land (np.ndarray):
+                Whether each cell does not involve the probability computation or not.
+            n_flags_in_neighbors (np.ndarray):
+                The numbers of flags around each cell.
+                As these numbers are repeatedly used, we make a cache for them.
+            n_closed_in_neighbors (np.ndarray):
+                The numbers of non-target closed cells around each cell.
+                As these numbers are repeatedly used, we make a cache for them.
+            target_neighbors (np.ndarray):
+                The indices of the target neighbors in the target.state array.
+            n_land_cells (int):
+                The number of land cells.
+            count4land (int):
+                The counts of how many times each land cell has a mine.
+            total_count (int):
+                The counts of how many states we consider.
+            opened_indices (int):
+                The indices of opened cells.
+            n_checked (int):
+                Until what target we checked up to now.
+                It is used for recursion.
+        """
         self._cell_state = cell_state
         self._neighbors = neighbors
         self._n_flags = np.count_nonzero(flags)
@@ -91,14 +137,14 @@ class ProbabilityCalculator:
             state=np.full(target_indices.size, CellStates.none.value, dtype=np.int32),
             count=np.zeros(target_indices.size, dtype=np.float64),
             proba=np.zeros(target_indices.size, dtype=np.float64),
-            rev={idx: i for i, idx in enumerate(target_indices)},
         )
+        rev = {idx: i for i, idx in enumerate(target_indices)}
         self._target_neighbors = [
-            np.array([target.rev[idx] for idx in indices if idx in target.rev], dtype=np.int32)
+            np.array([rev[idx] for idx in indices if idx in rev], dtype=np.int32)
             for indices in self._neighbors
         ]
         non_target_neighbors = [
-            np.array([idx for idx in indices if idx not in target.rev], dtype=np.int32)
+            np.array([idx for idx in indices if idx not in rev], dtype=np.int32)
             for indices in self._neighbors
         ]
         self._n_flags_in_neighbors = np.array(
