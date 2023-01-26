@@ -78,28 +78,22 @@ class Player:
             if cell_state[idx] == n_closed:
                 self._flags[neighbor_indices[neighbors_closed]] = True
 
-    def _open_safe_cells(self) -> None:
+    def _open_safe_cells(self) -> bool:
         cell_state = self._field.cell_state
         cell_opened = (cell_state != -1)
         target_indices = np.arange(self._n_cells)[cell_state > 0]
+        opened = False
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
             n_flags = np.count_nonzero(self._flags[neighbor_indices])
             if cell_state[idx] != n_flags:
                 continue
 
-            for target_idx in neighbor_indices:
-                if not self._flags[target_idx] and not cell_opened[target_idx]:
-                    self._open(target_idx)
+            for target_idx in neighbor_indices[~self._flags[neighbor_indices] & ~cell_opened[neighbor_indices]]:
+                self._open(target_idx)
+                opened = True
 
-    def _opened_any(self) -> bool:
-        cell_state = self._field.cell_state
-        n_open = np.count_nonzero(cell_state >= 0)
-        if n_open != self._n_open:
-            self._n_open = n_open
-            return True
-        else:
-            return False
+        return opened
 
     def _open_land(self) -> None:
         cell_state = self._field.cell_state
@@ -133,8 +127,7 @@ class Player:
 
         while not self.over and not self.clear:
             self._build_flag()
-            self._open_safe_cells()
-            if not self._opened_any():
+            if not self._open_safe_cells():
                 self._open_by_proba()
 
         return self.clear
