@@ -1,7 +1,7 @@
 from collections import deque
 from copy import deepcopy
 from enum import IntEnum
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional
 
 import numpy as np
 
@@ -30,6 +30,7 @@ class MineSweeper:
         seed (Optional[int]):
             The random seed.
     """
+
     def __init__(self, difficulty: Literal[0, 1, 2] = 0, seed: Optional[int] = None):
         """
         Attributes:
@@ -42,15 +43,14 @@ class MineSweeper:
             field (np.ndarray):
                 The ground truth of each cell.
                     -2: A mine.
-                    0: No mines around this cell.
-                    1--8: The corresponding number of mines exist around this cell.
+                     0: No mines around this cell.
+                     1--8: The corresponding number of mines exist around this cell.
                 The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
             cell_state (np.ndarray):
                 The state of each cell.
-                    -2: A mine.
                     -1: Closed.
-                    0: No mines around this cell.
-                    1--8: The corresponding number of mines exist around this cell.
+                     0: No mines around this cell.
+                     1--8: The corresponding number of mines exist around this cell.
                 The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
             neighbors (List[np.ndarray]):
                 The indices of neighbors in each cell.
@@ -62,11 +62,7 @@ class MineSweeper:
         self._field = np.zeros(self.height * self.width, dtype=np.int32)
         self._cell_state = -1 * np.ones(self.height * self.width, dtype=np.int32)
         self._neighbors = [
-            np.asarray([
-                self.loc2idx(y, x)
-                for (y, x) in self.idx2loc(i) + DIRS
-                if not self._out_of_field(y, x)
-            ])
+            np.asarray([self.loc2idx(y, x) for (y, x) in self.idx2loc(i) + DIRS if not self._out_of_field(y, x)])
             for i in range(self.height * self.width)
         ]
         self._over = False
@@ -100,23 +96,16 @@ class MineSweeper:
     def neighbors(self) -> List[np.ndarray]:
         return deepcopy(self._neighbors)
 
-    def __getitem__(self, loc: Tuple[int, int]) -> int:
-        y, x = loc
-        return self._cell_state[self.loc2idx(y, x)]
-
     def loc2idx(self, y: int, x: int) -> int:
         return self.width * y + x
 
     def idx2loc(self, idx: int) -> np.ndarray:
         return np.asarray([idx // self.width, idx % self.width])
 
-    def start(self, y: int, x: int) -> None:
+    def start(self, idx: int) -> None:
         # when opening first panel, you have to call start and specify which position you would like to open.
-        idx = self.loc2idx(y, x)
         non_neighbors = np.setdiff1d(
-            np.arange(self.width * self.height),
-            np.append(self._neighbors[idx], idx),
-            assume_unique=True
+            np.arange(self.width * self.height), np.append(self._neighbors[idx], idx), assume_unique=True
         )
         mine_loc = self._rng.choice(non_neighbors, size=self._n_mines, replace=False)
         self._field[mine_loc] = -2
@@ -127,10 +116,9 @@ class MineSweeper:
 
             self._field[i] = np.sum(self._field[self._neighbors[i]] == -2)
 
-        self.open(y, x)
+        self.open(idx)
 
-    def open(self, y: int, x: int) -> None:
-        idx = self.loc2idx(y, x)
+    def open(self, idx: int) -> None:
         self._cell_state[idx] = self._field[idx]
         if self._cell_state[idx] == -2:
             self._over = True

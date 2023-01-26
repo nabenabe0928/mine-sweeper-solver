@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Tuple
 
 import numpy as np
 
@@ -54,33 +53,31 @@ class Player:
     def clear(self) -> bool:
         return self._field.clear
 
-    def _start(self, y: int, x: int) -> None:
-        self._field.start(y, x)
-
-    def _idx2loc(self, idx: int) -> Tuple[int, int]:
-        return self._field.idx2loc(idx)
+    def _start(self, idx: int) -> None:
+        self._field.start(idx)
 
     def _add_flag(self, idx: int) -> None:
         self._flags[idx] = True
 
     def _open(self, idx: int) -> None:
-        y, x = self._idx2loc(idx)
-        self._field.open(y, x)
+        self._field.open(idx)
 
-    def _build_flag(self) -> None:
+    def _build_flags(self) -> None:
         cell_state = self._field.cell_state
-        cell_opened = (cell_state != -1)
+        cell_opened = cell_state != -1
         target_indices = np.arange(self._n_cells)[cell_state > 0]
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
             neighbors_closed = ~(cell_opened[neighbor_indices])
             n_closed = np.count_nonzero(neighbors_closed)
-            if cell_state[idx] == n_closed:
-                self._flags[neighbor_indices[neighbors_closed]] = True
+            if cell_state[idx] != n_closed:
+                continue
+
+            self._flags[neighbor_indices[neighbors_closed]] = True
 
     def _open_safe_cells(self) -> bool:
         cell_state = self._field.cell_state
-        cell_opened = (cell_state != -1)
+        cell_opened = cell_state != -1
         target_indices = np.arange(self._n_cells)[cell_state > 0]
         opened = False
         for idx in target_indices:
@@ -97,7 +94,7 @@ class Player:
 
     def _open_land(self) -> None:
         cell_state = self._field.cell_state
-        cell_closed = (cell_state == -1)
+        cell_closed = cell_state == -1
         closed_indices = np.arange(self._n_cells)[cell_closed]
         for idx in closed_indices:
             neighbor_indices = self._neighbors[idx]
@@ -107,7 +104,12 @@ class Player:
                 return
 
     def _open_by_proba(self) -> None:
-        prob = ProbabilityCalculator(field=self._field, flags=self.flags)
+        prob = ProbabilityCalculator(
+            cell_state=self._field.cell_state,
+            flags=self.flags,
+            neighbors=self._field.neighbors,
+            n_mines=self._field.n_mines,
+        )
         target, p_land = prob.compute()
         safe_cell_exist = np.count_nonzero(target.proba == 0.0)
 
@@ -123,10 +125,11 @@ class Player:
             self._open_land()
 
     def solve(self) -> bool:
-        self._start(self.H // 2, self.W // 2)
+        idx = self._field.loc2idx(y=self.H // 2, x=self.W // 2)
+        self._start(idx)
 
         while not self.over and not self.clear:
-            self._build_flag()
+            self._build_flags()
             if not self._open_safe_cells():
                 self._open_by_proba()
 
