@@ -63,36 +63,52 @@ class ProbabilityCalculator:
     ):
         self._cell_state = cell_state
         self._neighbors = neighbors
-        self._flags = flags
         self._n_flags = np.count_nonzero(flags)
         self._n_mines = n_mines
         self._n_cells = flags.size
         self._is_land = np.asarray(
             [
-                self._cell_state[idx] == -1 and np.count_nonzero(self._cell_state[neighbors] == -1) == len(neighbors)
+                cell_state[idx] == -1 and np.count_nonzero(cell_state[neighbors] == -1) == len(neighbors)
                 for idx, neighbors in enumerate(self._neighbors)
             ]
         )
-        self._target = self._init_target()
+        self._n_flags_in_neighbors: np.ndarray
+        self._n_closed_in_neighbors: np.ndarray
+        self._target_neighbors: np.ndarray
+
+        self._target = self._init_target(flags)
         self._n_land_cells = np.count_nonzero(self._is_land)
         self._count4land = 0
         self._total_count = 0
         self._opened_indices = np.arange(self._n_cells)[cell_state > 0]
-
         self._n_checked = 0
-        self.target = self._init_target()
 
-    def _init_target(self) -> TargetData:
-        mask = (self._cell_state == -1) & (~self._flags) & (~self._is_land)
+    def _init_target(self, flags: np.ndarray) -> TargetData:
+        mask = (self._cell_state == -1) & (~flags) & (~self._is_land)
         target_indices = np.arange(self._n_cells)[mask]
-
-        return TargetData(
+        target = TargetData(
             index=target_indices,
             state=np.full(target_indices.size, CellStates.none.value, dtype=np.int32),
             count=np.zeros(target_indices.size, dtype=np.float64),
             proba=np.zeros(target_indices.size, dtype=np.float64),
             rev={idx: i for i, idx in enumerate(target_indices)},
         )
+        self._target_neighbors = [
+            np.array([target.rev[idx] for idx in indices if idx in target.rev], dtype=np.int32)
+            for indices in self._neighbors
+        ]
+        non_target_neighbors = [
+            np.array([idx for idx in indices if idx not in target.rev], dtype=np.int32)
+            for indices in self._neighbors
+        ]
+        self._n_flags_in_neighbors = np.array(
+            [np.count_nonzero(flags[non_target_neighbors[i]]) for i in range(self._n_cells)]
+        )
+        self._n_closed_in_neighbors = np.array(
+            [np.count_nonzero(self._cell_state[non_target_neighbors[i]] == -1) for i in range(self._n_cells)]
+        )
+
+        return target
 
     def _add_count(self) -> None:
         new_mine_flags = (self._target.state == CellStates.mine.value) | (
@@ -117,61 +133,33 @@ class ProbabilityCalculator:
         if last_assumed_idx + 1 < self._target.state.size:
             self._target.state[last_assumed_idx + 1] = assumed_mine
 
-    def _count_new_neighbor_closed_cells(self, neighbor_indices: np.ndarray) -> int:
-        return np.count_nonzero(
-            [
-                self._target.state[self._target.rev[i]] != CellStates.safe.value
-                if i in self._target.rev
-                else self._cell_state[i] == -1
-                for i in neighbor_indices
-            ]
-        )
-
-    def _count_new_neighbor_mines(self, neighbor_indices: np.ndarray) -> int:
-        mine_idx = [CellStates.mine.value, CellStates.assumed_mine.value]
-        return np.count_nonzero(
-            [
-                self._target.state[self._target.rev[i]] in mine_idx if i in self._target.rev else self._flags[i]
-                for i in neighbor_indices
-            ]
-        )
-
-    def _get_target_neighbor(self, neighbor_indices: np.ndarray) -> np.ndarray:
-        target_indices = np.array(
-            [self._target.rev[i] for i in neighbor_indices if i in self._target.rev],
-            dtype=np.int32,
-        )
-        return target_indices[self._target.state[target_indices] == CellStates.none.value]
-
-    def _update_for_flag(self, neighbor_indices: np.ndarray) -> None:
-        target_neighbor = self._get_target_neighbor(neighbor_indices)
-        self._target.state[target_neighbor] = CellStates.mine.value
-
-    def _update_for_open(self, neighbor_indices: np.ndarray) -> bool:
-        target_neighbor = self._get_target_neighbor(neighbor_indices)
-        self._target.state[target_neighbor] = CellStates.safe.value
-        return target_neighbor.size > 0  # updated
-
     def _assume_flags(self) -> bool:
+        safe, mine, none = CellStates.safe.value, CellStates.mine.value, CellStates.none.value
         for idx in self._opened_indices:
-            neighbor_indices = self._neighbors[idx]
-            n_closed = self._count_new_neighbor_closed_cells(neighbor_indices)
+            target_indices = self._target_neighbors[idx]
+            ts = self._target.state[target_indices]
+            n_closed = self._n_closed_in_neighbors[idx] + np.count_nonzero(ts != safe)
             if n_closed < self._cell_state[idx]:  # contradiction
                 return True
             if self._cell_state[idx] == n_closed:
-                self._update_for_flag(neighbor_indices)
+                neighbor_none_indices = target_indices[ts == none]
+                self._target.state[neighbor_none_indices] = mine
 
         return False
 
     def _assume_safe_cells(self) -> Tuple[bool, bool]:
+        mine, assumed_mine, none = CellStates.mine.value, CellStates.assumed_mine.value, CellStates.none.value
         assumed = False
         for idx in self._opened_indices:
-            neighbor_indices = self._neighbors[idx]
-            n_flags = self._count_new_neighbor_mines(neighbor_indices)
+            target_indices = self._target_neighbors[idx]
+            ts = self._target.state[target_indices]
+            n_flags = self._n_flags_in_neighbors[idx] + np.count_nonzero((ts == mine) | (ts == assumed_mine))
             if n_flags > self._cell_state[idx]:  # contradiction
                 return True, False
             if n_flags == self._cell_state[idx]:
-                assumed |= self._update_for_open(neighbor_indices)
+                neighbor_none_indices = target_indices[ts == none]
+                self._target.state[neighbor_none_indices] = CellStates.safe.value
+                assumed |= neighbor_none_indices.size > 0
 
         return False, assumed
 

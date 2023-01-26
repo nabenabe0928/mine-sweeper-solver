@@ -56,9 +56,6 @@ class Player:
     def _start(self, idx: int) -> None:
         self._field.start(idx)
 
-    def _add_flag(self, idx: int) -> None:
-        self._flags[idx] = True
-
     def _open(self, idx: int) -> None:
         self._field.open(idx)
 
@@ -118,7 +115,7 @@ class Player:
                 if p == 0:
                     self._open(idx)
                 elif p == 1:
-                    self._add_flag(idx)
+                    self._flags[idx] = True
         elif target.proba.size != 0 and np.min(target.proba) < p_land:
             self._open(target.index[np.argmin(target.proba)])
         else:
