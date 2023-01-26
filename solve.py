@@ -20,7 +20,7 @@ def solve(seed: int, n_games: int, difficulty: int) -> None:
 if __name__ == "__main__":
     """
     easy   960/1000
-    normal 817/1000
+    normal 870/1000
     hard    42/100
     """
-    solve(seed=0, n_games=1000, difficulty=Difficulties.easy.value)
+    solve(seed=0, n_games=10, difficulty=Difficulties.hard.value)

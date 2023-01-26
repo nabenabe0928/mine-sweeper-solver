@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 import numpy as np
-
-from src.mine_sweeper import MineSweeper
 
 
 SIZE = 500
@@ -42,29 +40,46 @@ class ProbabilityCalculator:
     This class computes the probability of having a mine in each cell.
 
     Args:
-        field (MineSweeper):
-            The mine sweeper field instance.
+        cell_state (np.ndarray):
+                The state of each cell.
+                    -1: Closed.
+                     0: No mines around this cell.
+                     1--8: The corresponding number of mines exist around this cell.
+                The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
         flags (np.ndarray):
                 The flag whether the corresponding cell has a mine or not.
+        neighbors (List[np.ndarray]):
+            The indices of neighbors in each cell.
+        n_mines (int):
+            The number of mines in the field.
     """
-    def __init__(self, field: MineSweeper, flags: np.ndarray):
-        self._field = field
-        self._cell_state = field.cell_state
-        self._neighbors = field.neighbors
+
+    def __init__(
+        self,
+        cell_state: np.ndarray,
+        flags: np.ndarray,
+        neighbors: List[np.ndarray],
+        n_mines: int,
+    ):
+        self._cell_state = cell_state
+        self._neighbors = neighbors
         self._flags = flags
         self._n_flags = np.count_nonzero(flags)
-        self._n_mines = self._field.n_mines
-        self._n_cells = field.width * field.height
-        self._is_land = np.asarray([
-            self._cell_state[idx] == -1 and np.count_nonzero(self._cell_state[neighbors] == -1) == len(neighbors)
-            for idx, neighbors in enumerate(self._neighbors)
-        ])
+        self._n_mines = n_mines
+        self._n_cells = flags.size
+        self._is_land = np.asarray(
+            [
+                self._cell_state[idx] == -1 and np.count_nonzero(self._cell_state[neighbors] == -1) == len(neighbors)
+                for idx, neighbors in enumerate(self._neighbors)
+            ]
+        )
         self._target = self._init_target()
         self._n_land_cells = np.count_nonzero(self._is_land)
         self._count4land = 0
         self._total_count = 0
+        self._opened_indices = np.arange(self._n_cells)[cell_state > 0]
 
-        self.up_to_here = -1
+        self._n_checked = 0
         self.target = self._init_target()
 
     def _init_target(self) -> TargetData:
@@ -80,117 +95,121 @@ class ProbabilityCalculator:
         )
 
     def _add_count(self) -> None:
-        new_mine_flags = (self._target.state == 1) | (self._target.state == 2)
+        new_mine_flags = (self._target.state == CellStates.mine.value) | (
+            self._target.state == CellStates.assumed_mine.value
+        )
         n_remaining_mines = self._n_mines - self._n_flags - np.count_nonzero(new_mine_flags)
         counts = COMBINATION[self._n_land_cells, n_remaining_mines]
         self._count4land += COMBINATION[self._n_land_cells - 1, n_remaining_mines - 1]
         self._total_count += counts
         self._target.count[new_mine_flags] += counts
 
-    def _add_new_assumption(self) -> None:
-        none_indices = np.arange(self._target.state.size)[self._target.state == CellStates.none.value]
-        if none_indices.size > 0:
-            self._target.state[none_indices[0]] = CellStates.assumed_mine.value
-
-    def _renew_target(self) -> None:
+    def _update_target(self) -> None:
         assumed_mine = CellStates.assumed_mine.value
-        for i in range(self._target.state.size - 1, self.up_to_here, -1):
-            if self._target.state[i] != assumed_mine:
-                self._target.state[i] = CellStates.none.value
-            else:
-                self._target.state[i] = CellStates.safe.value
-                if assumed_mine not in self._target.state[:i]:
-                    self.up_to_here = i
-                self._add_new_assumption()
-                return
+        assumed_indices = np.arange(self._n_checked, self._target.state.size)[
+            self._target.state[self._n_checked:] == assumed_mine
+        ]
+        first_assumed_idx, last_assumed_idx = assumed_indices[0], assumed_indices[-1]
+        self._target.state[last_assumed_idx] = CellStates.safe.value
+        self._target.state[last_assumed_idx + 1:] = CellStates.none.value
+        if first_assumed_idx == last_assumed_idx:
+            self._n_checked = first_assumed_idx + 1
+        if last_assumed_idx + 1 < self._target.state.size:
+            self._target.state[last_assumed_idx + 1] = assumed_mine
 
     def _count_new_neighbor_closed_cells(self, neighbor_indices: np.ndarray) -> int:
-        return np.count_nonzero([
-            self._target.state[self._target.rev[i]] != CellStates.safe.value
-            if i in self._target.rev else
-            self._cell_state[i] == -1
-            for i in neighbor_indices
-        ])
+        return np.count_nonzero(
+            [
+                self._target.state[self._target.rev[i]] != CellStates.safe.value
+                if i in self._target.rev
+                else self._cell_state[i] == -1
+                for i in neighbor_indices
+            ]
+        )
 
     def _count_new_neighbor_mines(self, neighbor_indices: np.ndarray) -> int:
         mine_idx = [CellStates.mine.value, CellStates.assumed_mine.value]
-        return np.count_nonzero([
-            self._target.state[self._target.rev[i]] in mine_idx
-            if i in self._target.rev else
-            self._flags[i]
-            for i in neighbor_indices
-        ])
+        return np.count_nonzero(
+            [
+                self._target.state[self._target.rev[i]] in mine_idx if i in self._target.rev else self._flags[i]
+                for i in neighbor_indices
+            ]
+        )
+
+    def _get_target_neighbor(self, neighbor_indices: np.ndarray) -> np.ndarray:
+        target_indices = np.array(
+            [self._target.rev[i] for i in neighbor_indices if i in self._target.rev],
+            dtype=np.int32,
+        )
+        return target_indices[self._target.state[target_indices] == CellStates.none.value]
 
     def _update_for_flag(self, neighbor_indices: np.ndarray) -> None:
-        for idx in neighbor_indices:
-            if idx not in self._target.rev:
-                continue
-
-            target_idx = self._target.rev[idx]
-            if self._target.state[target_idx] == CellStates.none.value:
-                self._target.state[target_idx] = CellStates.mine.value
+        target_neighbor = self._get_target_neighbor(neighbor_indices)
+        self._target.state[target_neighbor] = CellStates.mine.value
 
     def _update_for_open(self, neighbor_indices: np.ndarray) -> bool:
-        opened = False
-        for idx in neighbor_indices:
-            if idx not in self._target.rev:
-                continue
+        target_neighbor = self._get_target_neighbor(neighbor_indices)
+        self._target.state[target_neighbor] = CellStates.safe.value
+        return target_neighbor.size > 0  # updated
 
-            target_idx = self._target.rev[idx]
-            if self._target.state[target_idx] == CellStates.none.value:
-                self._target.state[target_idx] = CellStates.safe.value
-                opened = True
-
-        return opened
-
-    def _build_flag(self) -> None:
-        cell_state = self._cell_state
-        target_indices = np.arange(self._n_cells)[cell_state > 0]
-        for idx in target_indices:
+    def _assume_flags(self) -> bool:
+        for idx in self._opened_indices:
             neighbor_indices = self._neighbors[idx]
             n_closed = self._count_new_neighbor_closed_cells(neighbor_indices)
-            if n_closed < cell_state[idx]:  # contradiction
-                self._renew_target()
-                return
-            elif cell_state[idx] == n_closed:
+            if n_closed < self._cell_state[idx]:  # contradiction
+                return True
+            if self._cell_state[idx] == n_closed:
                 self._update_for_flag(neighbor_indices)
 
-    def _open_safe_cells(self) -> bool:
-        cell_state = self._field.cell_state
-        target_indices = np.arange(self._n_cells)[cell_state > 0]
-        opened = False
-        for idx in target_indices:
+        return False
+
+    def _assume_safe_cells(self) -> Tuple[bool, bool]:
+        assumed = False
+        for idx in self._opened_indices:
             neighbor_indices = self._neighbors[idx]
             n_flags = self._count_new_neighbor_mines(neighbor_indices)
-            if cell_state[idx] != n_flags:
-                continue
-            if n_flags > cell_state[idx]:  # contradiction
-                self._renew_target()
-                return
-            elif n_flags == cell_state[idx]:
-                opened |= self._update_for_open(neighbor_indices)
+            if n_flags > self._cell_state[idx]:  # contradiction
+                return True, False
+            if n_flags == self._cell_state[idx]:
+                assumed |= self._update_for_open(neighbor_indices)
 
-        return opened
+        return False, assumed
+
+    def _assume(self) -> bool:
+        contradicted = self._assume_flags()
+        if contradicted:
+            return False
+
+        contradicted, assumed = self._assume_safe_cells()
+        if contradicted:
+            return False
+
+        if assumed:
+            return True
+
+        none_indices = np.where(self._target.state == CellStates.none.value)[0]
+        if none_indices.size > 0:  # new assumption
+            self._target.state[none_indices[0]] = CellStates.assumed_mine.value
+        else:
+            self._add_count()
+            self._update_target()
+
+        return True
 
     def compute(self) -> Tuple[TargetData, float]:
+        if self._target.state.size == 0:
+            return self._target, 0.0
+
         t = 0
-        while (
-            CellStates.assumed_mine.value in self._target.state or
-            CellStates.none.value in self._target.state
-        ):
+        self._target.state[0] = CellStates.assumed_mine.value
+        while CellStates.assumed_mine.value in self._target.state or CellStates.none.value in self._target.state:
             t += 1
             if t % 1000 == 0:
-                print(f"{t}: {self.up_to_here}")
+                print(f"{t}: {self._n_checked}")
 
-            self._build_flag()
-            if self._open_safe_cells():
+            if not self._assume():
+                self._update_target()
                 continue
-
-            if CellStates.none.value in self._target.state:
-                self._add_new_assumption()
-            else:
-                self._add_count()
-                self._renew_target()
 
         proba4land = 1.0
         if self._total_count != 0:
