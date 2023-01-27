@@ -64,5 +64,6 @@
         "typeinfo": "cpp",
         "utility": "cpp",
         "valarray": "cpp"
-    }
+    },
+    "editor.lightbulb.enabled": false
 }

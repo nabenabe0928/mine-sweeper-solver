@@ -46,14 +46,10 @@ class CellStates(IntEnum):
         safe (int):
             The cell does not have a mine.
         mine (int):
-            The cell has a mine and this conclusion could be drawn
-            from the association with other cells.
-        assumed_mine (int):
-            The cell has a mine and this is just an assumption.
+            The cell has a mine.
         none (int):
             The cell does not have any definition yet.
     """
     safe = 0
     mine = 1
-    assumed_mine = 2
-    none = 3
+    none = 2

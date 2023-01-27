@@ -23,8 +23,7 @@ if __name__ == "__main__":
     """
     easy   974/1000
     normal 870/1000
-    hard    42/100
-    6,6,4,5,5,6,x,x,4,6
+    hard    48/98
     """
     parser = ArgumentParser()
     parser.add_argument("--diff", default="medium", choices=[d.name for d in Difficulties])
