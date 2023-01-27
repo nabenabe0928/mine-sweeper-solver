@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import numpy as np
 
+from src.constants import CLOSED
 from src.mine_sweeper import MineSweeper
 from src.probability import ProbabilityCalculator
 
@@ -61,7 +62,7 @@ class Player:
 
     def _build_flags(self) -> None:
         cell_state = self._field.cell_state
-        cell_opened = cell_state != -1
+        cell_opened = cell_state != CLOSED
         target_indices = np.arange(self._n_cells)[cell_state > 0]
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
@@ -74,7 +75,7 @@ class Player:
 
     def _open_safe_cells(self) -> bool:
         cell_state = self._field.cell_state
-        cell_opened = cell_state != -1
+        cell_opened = cell_state != CLOSED
         target_indices = np.arange(self._n_cells)[cell_state > 0]
         opened = False
         for idx in target_indices:
@@ -91,7 +92,7 @@ class Player:
 
     def _open_land(self) -> None:
         cell_state = self._field.cell_state
-        cell_closed = cell_state == -1
+        cell_closed = cell_state == CLOSED
         closed_indices = np.arange(self._n_cells)[cell_closed]
         for idx in closed_indices:
             neighbor_indices = self._neighbors[idx]

@@ -1,18 +1,10 @@
 from collections import deque
 from copy import deepcopy
-from enum import IntEnum
 from typing import List, Literal, Optional
 
 import numpy as np
 
-
-DIRS = np.asarray([[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]])
-
-
-class Difficulties(IntEnum):
-    easy = 0
-    medium = 1
-    hard = 2
+from src.constants import CLOSED, DIRS
 
 
 class MineSweeper:
@@ -60,7 +52,7 @@ class MineSweeper:
         self._height = [9, 16, 16][difficulty]
         self._n_mines = [10, 40, 100][difficulty]
         self._field = np.zeros(self.height * self.width, dtype=np.int32)
-        self._cell_state = -1 * np.ones(self.height * self.width, dtype=np.int32)
+        self._cell_state = CLOSED * np.ones(self.height * self.width, dtype=np.int32)
         self._neighbors = [
             np.asarray([self.loc2idx(y, x) for (y, x) in self.idx2loc(i) + DIRS if not self._out_of_field(y, x)])
             for i in range(self.height * self.width)
@@ -124,7 +116,7 @@ class MineSweeper:
             self._over = True
 
         self._open_around_zero([idx] if self._cell_state[idx] == 0 else [])
-        n_close = np.count_nonzero(self._cell_state == -1)
+        n_close = np.count_nonzero(self._cell_state == CLOSED)
         if n_close == self._n_mines and not self._over:
             self._clear = True
         self.plot_field()
@@ -134,7 +126,7 @@ class MineSweeper:
         while len(q) > 0:
             idx = q.popleft()
             neighbor_indices = self._neighbors[idx]
-            closed = self._cell_state[neighbor_indices] == -1
+            closed = self._cell_state[neighbor_indices] == CLOSED
             self._cell_state[neighbor_indices] = self._field[neighbor_indices]
             q.extend([i for i in neighbor_indices[closed] if self._cell_state[i] == 0])
 
@@ -159,7 +151,7 @@ class MineSweeper:
 
     def _convert_string(self, y: int, x: int) -> str:
         idx = self.loc2idx(y, x)
-        if self._cell_state[idx] == -1:
+        if self._cell_state[idx] == CLOSED:
             return "x"
         elif self._field[idx] >= 0 and self._cell_state[idx] >= 0:
             return str(self._cell_state[idx])

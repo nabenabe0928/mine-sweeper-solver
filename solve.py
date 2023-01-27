@@ -1,6 +1,8 @@
 import time
+from argparse import ArgumentParser
 
-from src.mine_sweeper import Difficulties, MineSweeper
+from src.constants import Difficulties
+from src.mine_sweeper import MineSweeper
 from src.player import Player
 
 
@@ -22,5 +24,12 @@ if __name__ == "__main__":
     easy   974/1000
     normal 870/1000
     hard    42/100
+    6,6,4,5,5,6,x,x,4,6
     """
-    solve(seed=0, n_games=1000, difficulty=Difficulties.easy.value)
+    parser = ArgumentParser()
+    parser.add_argument("--diff", default="medium", choices=[d.name for d in Difficulties])
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--N", type=int, default=100)
+
+    args = parser.parse_args()
+    solve(seed=args.seed, n_games=args.N, difficulty=getattr(Difficulties, args.diff).value)
