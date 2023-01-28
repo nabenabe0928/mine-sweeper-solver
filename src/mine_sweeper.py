@@ -21,9 +21,11 @@ class MineSweeper:
                 30 x 16 cells with 100 mines.
         seed (Optional[int]):
             The random seed.
+        plot_field (bool):
+            Whether to print the field each round.
     """
 
-    def __init__(self, difficulty: Literal[0, 1, 2] = 0, seed: Optional[int] = None):
+    def __init__(self, difficulty: Literal[0, 1, 2] = 0, seed: Optional[int] = None, plot_field: bool = True):
         """
         Attributes:
             width (int):
@@ -57,8 +59,10 @@ class MineSweeper:
             np.asarray([self.loc2idx(y, x) for (y, x) in self.idx2loc(i) + DIRS if not self._out_of_field(y, x)])
             for i in range(self.height * self.width)
         ]
+        self._plot_field = plot_field
         self._over = False
         self._clear = False
+        self._terminated = False
 
     @property
     def width(self) -> int:
@@ -119,7 +123,8 @@ class MineSweeper:
         n_close = np.count_nonzero(self._cell_state == CLOSED)
         if n_close == self._n_mines and not self._over:
             self._clear = True
-        self.plot_field()
+        if not self._terminated:
+            self.plot_field()
 
     def _open_around_zero(self, new_zero_indices: List[int]) -> None:
         q = deque(new_zero_indices)
@@ -132,6 +137,9 @@ class MineSweeper:
 
     def plot_field(self) -> None:
         self._print_judge()
+        if not self._plot_field:
+            return
+
         for y in range(self.height):
             s = " ".join([self._convert_string(y, x) for x in range(self.width)])
             print(s)
@@ -139,11 +147,13 @@ class MineSweeper:
 
     def _print_judge(self) -> None:
         if self._over:
+            self._terminated = True
             print("*******************")
             print("***  game over  ***")
             print("*******************")
             print("")
         elif self._clear:
+            self._terminated = True
             print("*******************")
             print("*** game clear! ***")
             print("*******************")
