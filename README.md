@@ -18,7 +18,7 @@ Note that each difficulty has the following field:
 - Medium: $16 \times 16$ with $40$ mines
 - Hard: $16 \times 30$ with $100$ mines
 
-In the experiments, seeds 132, 182, 188, 243, 268, and 273 did not finish in one hour, so I counted as lost.
+In the experiments, seeds 132, 182, 188, 243, 268, and 273 in Hard did not finish in one hour, so I counted as lost.
 
 ## Reproduce the experiments
 
