@@ -1,4 +1,5 @@
 # MineSweeper
+This solver uses the depth-first search to compute the probabilities of each cell having a mine and I speeded up the code using NumPy and caching. There might be room for improvement in the speed, but my implementation achieves the theoretical performance bound.
 
 ## Requirements
 - python 3.8
