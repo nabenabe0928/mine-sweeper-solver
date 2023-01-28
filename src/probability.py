@@ -137,18 +137,20 @@ class ProbabilityCalculator:
             self._states[last_assumed_idx + 1] = MINE
             self._assumed[last_assumed_idx + 1] = True
 
-    def _assume_flags(self) -> bool:
+    def _assume_flags(self) -> Tuple[bool, bool]:
+        assumed = False
         for idx in self._opened_indices:
             target_indices = self._target_neighbors[idx]
             ts = self._states[target_indices]
             n_closed = self._n_closed_in_neighbors[idx] + np.count_nonzero(ts != SAFE)
             if n_closed < self._cell_state[idx]:  # contradiction
-                return True
+                return True, False
             if self._cell_state[idx] == n_closed:
                 neighbor_none_indices = target_indices[ts == NONE]
                 self._states[neighbor_none_indices] = MINE
+                assumed = neighbor_none_indices.size > 0
 
-        return False
+        return False, assumed
 
     def _assume_safe_cells(self) -> Tuple[bool, bool]:
         assumed = False
@@ -161,20 +163,20 @@ class ProbabilityCalculator:
             if n_flags == self._cell_state[idx]:
                 neighbor_none_indices = target_indices[ts == NONE]
                 self._states[neighbor_none_indices] = SAFE
-                assumed |= neighbor_none_indices.size > 0
+                assumed = neighbor_none_indices.size > 0
 
         return False, assumed
 
     def _assume(self) -> bool:
-        contradicted = self._assume_flags()
+        contradicted, assumed_flags = self._assume_flags()
         if contradicted:
             return False
 
-        contradicted, assumed = self._assume_safe_cells()
+        contradicted, assumed_safe_cells = self._assume_safe_cells()
         if contradicted:
             return False
 
-        if assumed:
+        if assumed_flags or assumed_safe_cells:
             return True
 
         none_indices = np.where(self._states == NONE)[0]
