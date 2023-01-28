@@ -115,11 +115,14 @@ class MineSweeper:
         self.open(idx)
 
     def open(self, idx: int) -> None:
-        self._cell_state[idx] = self._field[idx]
-        if self._cell_state[idx] == -2:
+        self.open_multiple(np.asarray([idx]))
+
+    def open_multiple(self, indices: np.ndarray) -> None:
+        self._cell_state[indices] = self._field[indices]
+        if np.any(self._cell_state[indices] == -2):
             self._over = True
 
-        self._open_around_zero([idx] if self._cell_state[idx] == 0 else [])
+        self._open_around_zero(indices[self._cell_state[indices] == 0])
         n_close = np.count_nonzero(self._cell_state == CLOSED)
         if n_close == self._n_mines and not self._over:
             self._clear = True

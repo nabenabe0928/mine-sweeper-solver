@@ -60,6 +60,9 @@ class Player:
     def _open(self, idx: int) -> None:
         self._field.open(idx)
 
+    def _open_multiple(self, indices: np.ndarray) -> None:
+        self._field.open_multiple(indices)
+
     def _build_flags(self) -> None:
         cell_state = self._field.cell_state
         cell_opened = cell_state != CLOSED
@@ -77,18 +80,20 @@ class Player:
         cell_state = self._field.cell_state
         cell_opened = cell_state != CLOSED
         target_indices = np.arange(self._n_cells)[cell_state > 0]
-        opened = False
+        open_indices_list = []
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
             n_flags = np.count_nonzero(self._flags[neighbor_indices])
             if cell_state[idx] != n_flags:
                 continue
 
-            for target_idx in neighbor_indices[~self._flags[neighbor_indices] & ~cell_opened[neighbor_indices]]:
-                self._open(target_idx)
-                opened = True
+            open_indices = neighbor_indices[~self._flags[neighbor_indices] & ~cell_opened[neighbor_indices]]
+            open_indices_list.extend(open_indices)
 
-        return opened
+        if len(open_indices_list) > 0:
+            self._open_multiple(np.unique(open_indices_list))
+
+        return len(open_indices_list) > 0  # opened at least one cell or not
 
     def _open_land(self) -> None:
         cell_state = self._field.cell_state
@@ -112,11 +117,8 @@ class Player:
         safe_cell_exist = np.count_nonzero(target.proba == 0.0)
 
         if safe_cell_exist:
-            for idx, p in zip(target.index, target.proba):
-                if p == 0:
-                    self._open(idx)
-                elif p == 1:
-                    self._flags[idx] = True
+            self._flags[target.index[target.proba == 1.0]] = True
+            self._open_multiple(target.index[target.proba == 0.0])
         elif target.proba.size != 0 and np.min(target.proba) < p_land:
             self._open(target.index[np.argmin(target.proba)])
         else:
