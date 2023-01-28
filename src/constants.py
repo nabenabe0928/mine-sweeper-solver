@@ -30,6 +30,7 @@ class TargetData:
         proba (np.ndarray):
             The probability of each cell having a mine.
     """
+
     index: np.ndarray
     proba: np.ndarray
 
@@ -50,6 +51,7 @@ class CellStates(IntEnum):
         none (int):
             The cell does not have any definition yet.
     """
+
     safe = 0
     mine = 1
     none = 2

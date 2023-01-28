@@ -1,4 +1,5 @@
 from typing import List, Tuple
+
 import numpy as np
 
 from src.constants import CellStates, CLOSED, COMBINATION, TargetData
@@ -98,12 +99,10 @@ class ProbabilityCalculator:
         )
         rev = {idx: i for i, idx in enumerate(target_indices)}
         self._target_neighbors = [
-            np.array([rev[idx] for idx in indices if idx in rev], dtype=np.int32)
-            for indices in self._neighbors
+            np.array([rev[idx] for idx in indices if idx in rev], dtype=np.int32) for indices in self._neighbors
         ]
         non_target_neighbors = [
-            np.array([idx for idx in indices if idx not in rev], dtype=np.int32)
-            for indices in self._neighbors
+            np.array([idx for idx in indices if idx not in rev], dtype=np.int32) for indices in self._neighbors
         ]
         self._n_flags_in_neighbors = np.array(
             [np.count_nonzero(flags[non_target_neighbors[i]]) for i in range(self._n_cells)]
