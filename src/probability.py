@@ -117,10 +117,14 @@ class ProbabilityCalculator:
     def _add_count(self) -> None:
         new_mine_flags = self._states == MINE
         n_remaining_mines = self._n_mines - self._n_flags - np.count_nonzero(new_mine_flags)
+        if n_remaining_mines < 0:  # contradiction
+            return
+
         counts = COMBINATION[self._n_land_cells, n_remaining_mines]
-        self._count4land += COMBINATION[self._n_land_cells - 1, n_remaining_mines - 1]
         self._total_count += counts
         self._counts[new_mine_flags] += counts
+        if n_remaining_mines - 1 >= 0 and self._n_land_cells - 1 >= 0:
+            self._count4land += COMBINATION[self._n_land_cells - 1, n_remaining_mines - 1]
 
     def _update_target(self) -> None:
         assumed_indices = np.arange(self._n_checked, self._states.size)[self._assumed[self._n_checked:]]
@@ -192,7 +196,7 @@ class ProbabilityCalculator:
         self._states[0], self._assumed[0] = MINE, True
         while np.any(self._assumed) or NONE in self._states:
             t += 1
-            if t % 1000 == 0:
+            if t % 10000 == 0:
                 print(f"{t}: {self._n_checked}")
 
             if not self._assume():

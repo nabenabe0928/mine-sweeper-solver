@@ -21,9 +21,9 @@ def solve(seed: int, n_games: int, difficulty: int) -> None:
 
 if __name__ == "__main__":
     """
-    easy   974/1000
-    normal 870/1000
-    hard    48/98
+    Easy   9602/10000
+    Medium 1742/2000
+    Hard    181/400
     """
     parser = ArgumentParser()
     parser.add_argument("--diff", default="medium", choices=[d.name for d in Difficulties])
