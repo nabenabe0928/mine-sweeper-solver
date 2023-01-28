@@ -80,20 +80,19 @@ class Player:
         cell_state = self._field.cell_state
         cell_opened = cell_state != CLOSED
         target_indices = np.arange(self._n_cells)[cell_state > 0]
-        open_indices_list = []
+        open_indices = []
         for idx in target_indices:
             neighbor_indices = self._neighbors[idx]
             n_flags = np.count_nonzero(self._flags[neighbor_indices])
             if cell_state[idx] != n_flags:
                 continue
 
-            open_indices = neighbor_indices[~self._flags[neighbor_indices] & ~cell_opened[neighbor_indices]]
-            open_indices_list.extend(open_indices)
+            open_indices.extend(neighbor_indices[~self._flags[neighbor_indices] & ~cell_opened[neighbor_indices]])
 
-        if len(open_indices_list) > 0:
-            self._open_multiple(np.unique(open_indices_list))
+        if len(open_indices) > 0:
+            self._open_multiple(np.unique(open_indices))
 
-        return len(open_indices_list) > 0  # opened at least one cell or not
+        return len(open_indices) > 0  # opened at least one cell or not
 
     def _open_land(self) -> None:
         cell_state = self._field.cell_state
