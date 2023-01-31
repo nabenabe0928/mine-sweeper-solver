@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from src.constants import CellStates, CLOSED, COMBINATION, TargetData
+from src.constants import CLOSED, COMBINATION, CellStates, TargetData
 
 
 MINE, NONE, SAFE = CellStates.mine.value, CellStates.none.value, CellStates.safe.value
@@ -126,10 +126,15 @@ class ProbabilityCalculator:
             self._count4land += COMBINATION[self._n_land_cells - 1, n_remaining_mines - 1]
 
     def _update_target(self) -> None:
-        assumed_indices = np.arange(self._n_checked, self._states.size)[self._assumed[self._n_checked:]]
-        first_assumed_idx, last_assumed_idx = assumed_indices[0], assumed_indices[-1]
+        n_checked = self._n_checked
+        assumed_indices = np.arange(n_checked, self._states.size)[self._assumed[n_checked:]]
+        first_assumed_idx, last_assumed_idx, after_assumed_idx = (
+            assumed_indices[0],
+            assumed_indices[-1],
+            assumed_indices[-1] + 1,
+        )
         self._states[last_assumed_idx] = SAFE
-        self._states[last_assumed_idx + 1:] = NONE
+        self._states[after_assumed_idx:] = NONE  # noqa: E203
         self._assumed[last_assumed_idx:] = False
         if first_assumed_idx == last_assumed_idx:
             self._n_checked = first_assumed_idx + 1
