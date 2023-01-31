@@ -1,4 +1,4 @@
-# MineSweeper
+# Probablity-based solver for MineSweeper
 
 [![Buildl Status](https://github.com/nabenabe0928/mine-sweeper-solver/workflows/Python3.8/badge.svg?branch=main)](https://github.com/nabenabe0928/mine-sweeper-solver)
 [![codecov](https://codecov.io/gh/nabenabe0928/mine-sweeper-solver/branch/main/graph/badge.svg?token=FQWPWEJSWE)](https://codecov.io/gh/nabenabe0928/mine-sweeper-solver)
