@@ -93,9 +93,16 @@ class MineSweeper:
         return deepcopy(self._neighbors)
 
     def loc2idx(self, y: int, x: int) -> int:
+        if self._out_of_field(y, x):
+            raise ValueError(f"(y, x) must be in [0, {self.height}) x [0, {self.width}), but got ({y}, {x})")
+
         return self.width * y + x
 
     def idx2loc(self, idx: int) -> np.ndarray:
+        size = self.width * self.height
+        if idx < 0 or idx >= self.width * self.height:
+            raise ValueError(f"idx must be in [0, HW) = [0, {size}), but got {idx}")
+
         return np.asarray([idx // self.width, idx % self.width])
 
     def start(self, idx: int) -> None:
@@ -139,7 +146,7 @@ class MineSweeper:
             q.extend([i for i in neighbor_indices[closed] if self._cell_state[i] == 0])
 
     def plot_field(self) -> None:
-        self._print_judge()
+        print(self._get_judge_statement())
         if not self._plot_field:
             return
 
@@ -148,19 +155,20 @@ class MineSweeper:
             print(s)
         print("")
 
-    def _print_judge(self) -> None:
+    def _get_judge_statement(self) -> str:
+        s = ""
         if self._over:
             self._terminated = True
-            print("*******************")
-            print("***  game over  ***")
-            print("*******************")
-            print("")
+            s = "*******************\n"
+            s += "***  game over  ***\n"
+            s += "*******************\n"
         elif self._clear:
             self._terminated = True
-            print("*******************")
-            print("*** game clear! ***")
-            print("*******************")
-            print("")
+            s = "*******************\n"
+            s += "*** game clear! ***\n"
+            s += "*******************\n"
+
+        return s
 
     def _convert_string(self, y: int, x: int) -> str:
         idx = self.loc2idx(y, x)
