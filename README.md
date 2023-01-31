@@ -1,4 +1,8 @@
 # MineSweeper
+
+[![Buildl Status](https://github.com/nabenabe0928/mine-sweeper-solver/workflows/Python3.8/badge.svg?branch=main)](https://github.com/nabenabe0928/mine-sweeper-solver)
+[![codecov](https://codecov.io/gh/nabenabe0928/mine-sweeper-solver/branch/main/graph/badge.svg?token=FQWPWEJSWE)](https://codecov.io/gh/nabenabe0928/mine-sweeper-solver)
+
 This solver uses the depth-first search to compute the probabilities of each cell having a mine and I speeded up the code using NumPy and caching. There might be room for improvement in the speed, but my implementation achieves the theoretical performance bound.
 
 ## Requirements
