@@ -11,6 +11,11 @@ def test_combination():
     ans = np.array(a + [0] * (SIZE - len(a)))
     assert np.allclose(vals, ans)
 
+    vals = combination(10)
+    a = [1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1]
+    ans = np.array(a + [0] * (SIZE - len(a)))
+    assert np.allclose(vals, ans)
+
 
 if __name__ == "__main__":
     unittest.main()
