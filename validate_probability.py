@@ -1,7 +1,6 @@
 import numpy as np
 
-from src.probability import ProbabilityCalculator
-from src.mine_sweeper import MineSweeper
+from src.visualizer import visualize
 
 
 """
@@ -37,7 +36,6 @@ The indices of A: [ 76 156 183 184 188 197 198 204 214 215 219 220 234]
 The indices of B: [ 73 100 172 199 218]
 """
 
-ms = MineSweeper(difficulty=1)
 cell_state = np.array(
     [
         [-1] * 16,
@@ -60,13 +58,4 @@ cell_state = np.array(
 ).flatten()
 flags = np.zeros_like(cell_state, dtype=np.bool8)
 flags[[86, 87, 92, 139, 149]] = True
-prob = ProbabilityCalculator(
-    cell_state=cell_state,
-    flags=flags,
-    neighbors=ms.neighbors,
-    n_mines=ms.n_mines,
-)
-
-target = prob.compute()[0]
-print(target.index[target.proba == 0])
-print(target.index[target.proba == 1])
+visualize(cell_state, flags)

@@ -5,6 +5,12 @@
 
 This solver uses the depth-first search to compute the probabilities of each cell having a mine and I speeded up the code using NumPy and caching. There might be room for improvement in the speed, but my implementation achieves the theoretical performance bound.
 
+<p align="middle">
+    <img src="/demodata/medium11.gif" width="33%" />
+    <img src="/demodata/medium14.gif" width="33%" />
+    <img src="/demodata/medium18.gif" width="33%" />
+</p>
+
 ## Requirements
 - python 3.8
 - numpy >= 1.21.5
@@ -36,4 +42,10 @@ python solve.py --diff medium --seed 0 --N 1000
 
 # Medium
 python solve.py --diff hard --seed 0 --N 100
+```
+
+Also, for the visualization demo, try the following command:
+
+```shell
+python validate_probability.py
 ```
