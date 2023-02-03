@@ -24,7 +24,7 @@ def visualize(cell_state: np.ndarray, flags: np.ndarray, identifier: Optional[in
 
     W, H = ms.width, ms.height
 
-    _, ax = plt.subplots(figsize=(10, 10))
+    _, ax = plt.subplots(figsize=(5 * W / 8, 5 * H / 8))
     ax.tick_params(labelbottom=False, bottom=False, labelleft=False, left=False)
     ax.vlines(np.arange(W + 1), 0, H, colors="black")
     ax.hlines(np.arange(H + 1), 0, W, colors="black")
@@ -40,6 +40,10 @@ def visualize(cell_state: np.ndarray, flags: np.ndarray, identifier: Optional[in
             if flag:
                 kwargs = dict(color="orange", ha="center", va="center", weight="bold")
                 ax.text(x + 0.5, H - y - 0.5, "P", fontsize=15, **kwargs)
+        elif state == -2:
+            ax.fill_between([x, x + 1], H - y - 1, H - y, color="darkred")
+            kwargs = dict(ha="center", va="center", weight="bold")
+            ax.text(x + 0.5, H - y - 0.5, "X", color="white", fontsize=15, **kwargs)
         else:
             color = COLORS_OF_NUMBERS[state]
             ax.text(x + 0.5, H - y - 0.5, f"{state}", color=color, ha="center", va="center")
