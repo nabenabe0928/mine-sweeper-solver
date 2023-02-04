@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from src.probability import ProbabilityCalculator
 from src.mine_sweeper import MineSweeper
+from src.probability import ProbabilityCalculator
 
 
 def visualize(cell_state: np.ndarray, flags: np.ndarray, identifier: Optional[int] = None) -> None:
