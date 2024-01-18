@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from __future__ import annotations
 
 import numpy as np
 
@@ -21,7 +21,7 @@ class ProbabilityCalculator:
                 The data is kept by 1D array, so we need to transform (y, x) --> y * w + x
         flags (np.ndarray):
                 The flag whether the corresponding cell has a mine or not.
-        neighbors (List[np.ndarray]):
+        neighbors (list[np.ndarray]):
             The indices of neighbors in each cell.
         n_mines (int):
             The number of mines in the field.
@@ -31,7 +31,7 @@ class ProbabilityCalculator:
         self,
         cell_state: np.ndarray,
         flags: np.ndarray,
-        neighbors: List[np.ndarray],
+        neighbors: list[np.ndarray],
         n_mines: int,
     ):
         """
@@ -142,7 +142,7 @@ class ProbabilityCalculator:
             self._states[last_assumed_idx + 1] = MINE
             self._assumed[last_assumed_idx + 1] = True
 
-    def _assume_flags(self) -> Tuple[bool, bool]:
+    def _assume_flags(self) -> tuple[bool, bool]:
         assumed = False
         for idx in self._opened_indices:
             target_indices = self._target_neighbors[idx]

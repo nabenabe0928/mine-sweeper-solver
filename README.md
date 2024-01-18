@@ -48,6 +48,17 @@ Also, for the visualization demo, try the following command:
 python validate_probability.py
 ```
 
+## Build with the C++ implementation
+
+```shell
+$ mkdir build
+$ cd build
+$ cmake ..
+$ make
+# For example, the path is under the site-packages/ directory of your Python.
+$ mv mine_sweeper_solver.* <path/to/your/python/lib>
+```
+
 ## Demos with other seeds
 
 <p align="middle">

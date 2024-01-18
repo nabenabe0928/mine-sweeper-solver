@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import deque
 from copy import deepcopy
-from typing import List, Literal, Optional
+from typing import Literal
 
 import numpy as np
 
@@ -19,13 +21,13 @@ class MineSweeper:
                 16 x 16 cells with 40 mines.
             2 (hard):
                 30 x 16 cells with 100 mines.
-        seed (Optional[int]):
+        seed (int | None):
             The random seed.
         plot_field (bool):
             Whether to print the field each round.
     """
 
-    def __init__(self, difficulty: Literal[0, 1, 2] = 0, seed: Optional[int] = None, plot_field: bool = True):
+    def __init__(self, difficulty: Literal[0, 1, 2] = 0, seed: int | None = None, plot_field: bool = True):
         """
         Attributes:
             width (int):
@@ -89,7 +91,7 @@ class MineSweeper:
         return deepcopy(self._cell_state)
 
     @property
-    def neighbors(self) -> List[np.ndarray]:
+    def neighbors(self) -> list[np.ndarray]:
         return deepcopy(self._neighbors)
 
     def loc2idx(self, y: int, x: int) -> int:
@@ -136,7 +138,7 @@ class MineSweeper:
         if not self._terminated:
             self.plot_field()
 
-    def _open_around_zero(self, new_zero_indices: List[int]) -> None:
+    def _open_around_zero(self, new_zero_indices: list[int]) -> None:
         q = deque(new_zero_indices)
         while len(q) > 0:
             idx = q.popleft()

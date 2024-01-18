@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import os
-from typing import Optional
 
 import matplotlib.pyplot as plt
 
@@ -9,7 +10,7 @@ from src.mine_sweeper import MineSweeper
 from src.probability import ProbabilityCalculator
 
 
-def visualize(cell_state: np.ndarray, flags: np.ndarray, identifier: Optional[int] = None) -> None:
+def visualize(cell_state: np.ndarray, flags: np.ndarray, identifier: int | None = None) -> None:
     size = cell_state.size
     difficulty = {81: 0, 256: 1, 480: 2}[size]
     ms = MineSweeper(difficulty=difficulty)

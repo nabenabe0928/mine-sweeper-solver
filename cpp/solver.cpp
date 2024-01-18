@@ -297,6 +297,7 @@ struct MineSweeperSolver {
                 } else if (is_bomb(h, w)) {
                     prob_in_cells[h][w] = 1.0;
                 } else {
+                    // hard cell.
                     prob_in_cells[h][w] = probs[n_targets];
                 }
             }
