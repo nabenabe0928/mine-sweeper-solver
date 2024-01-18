@@ -3,6 +3,15 @@
 using std::vector;
 using std::pair;
 
+struct AssumptionDefinition {
+    const int bomb = 0;
+    const int safe = 1;
+    const int undefined = -1;
+};
+
+const AssumptionDefinition assumption_definition = AssumptionDefinition();
+const int closed_cell_state = -1;
+
 vector<vector<long double>> compute_combination(int n){
     vector<vector<long double>> combination_memo = vector<vector<long double>>(n, vector<long double>(n, 0.0));
     for (int i = 0; i < n; ++i){
@@ -28,8 +37,7 @@ struct MineSweeperSolver {
     vector<pair<int, int>> target_cell_positions;
 
     // state variables.
-    vector<vector<bool>> bomb_cells;
-    vector<vector<bool>> safe_cells;
+    vector<vector<int>> cell_definitions;
 
     // variables for the result.
     vector<long double> probs;
@@ -42,8 +50,9 @@ struct MineSweeperSolver {
         width(cell_states[0].size())
     {
         neighbor_list = get_neighbor_list();
-        bomb_cells = determine_bomb_cells();
-        safe_cells = determine_safe_cells();
+        cell_definitions = vector<vector<int>>(height, vector<int>(width, -1));
+        determine_bomb_cells();
+        determine_safe_cells();
         target_cell_positions = collect_target_cell_positions();
         n_targets = target_cell_positions.size();
         combination_memo = compute_combination(width * height + 1);
@@ -53,10 +62,22 @@ struct MineSweeperSolver {
         prob_sum = 0.0;
     }
 
+    bool is_safe(int h, int w) {
+        return cell_definitions[h][w] == assumption_definition.safe;
+    }
+    
+    bool is_bomb(int h, int w) {
+        return cell_definitions[h][w] == assumption_definition.bomb;
+    }
+
+    bool is_closed(int h, int w) {
+        return cell_states[h][w] == closed_cell_state;
+    }
+
     int count_close_around(vector<pair<int, int>>& neighbor_positions){
         int count = 0;
         for (const auto& [y, x]: neighbor_positions){
-            if (cell_states[y][x] == -1){
+            if (is_closed(y, x)){
                 ++count;
             }
         }
@@ -70,7 +91,7 @@ struct MineSweeperSolver {
     int count_bomb_around(vector<pair<int, int>>& neighbor_positions){
         int count = 0;
         for (const auto& [y, x]: neighbor_positions){
-            if (bomb_cells[y][x]){
+            if (is_bomb(y, x)){
                 ++count;
             }
         }
@@ -80,8 +101,20 @@ struct MineSweeperSolver {
     int count_safe_around(vector<pair<int, int>>& neighbor_positions){
         int count = 0;
         for (const auto& [y, x]: neighbor_positions){
-            if (safe_cells[y][x] || cell_states[y][x] != -1){
+            if (is_safe(y, x)){
                 ++count;
+            }
+        }
+        return count;
+    }
+
+    int count_bombs() {
+        int count = 0;
+        for (int h = 0; h < height; ++h){
+            for (int w = 0; w < width; ++w){
+                if (is_bomb(h, w)) {
+                    ++count;
+                }
             }
         }
         return count;
@@ -91,7 +124,7 @@ struct MineSweeperSolver {
         int count = 0;
         for (int h = 0; h < height; ++h){
             for (int w = 0; w < width; ++w){
-                if (cell_states[h][w] != -1){
+                if (!is_closed(h, w)){
                     continue;
                 }
                 vector<pair<int, int>>& neighbor_positions = neighbor_list[h][w];
@@ -103,24 +136,11 @@ struct MineSweeperSolver {
         return count;
     }
 
-    int count_bombs() {
-        int count = 0;
-        for (int h = 0; h < height; ++h){
-            for (int w = 0; w < width; ++w){
-                if (bomb_cells[h][w]) {
-                    ++count;
-                }
-            }
-        }
-        return count;
-    }
-
-    vector<vector<bool>> determine_bomb_cells(){
-        vector<vector<bool>> bomb_cells = vector<vector<bool>>(height, vector<bool>(width, false));
+    void determine_bomb_cells(){
         for (int h = 0; h < height; ++h){
             for (int w = 0; w < width; ++w){
                 const int n_bombs_around = cell_states[h][w];
-                if (cell_states[h][w] <= 0){
+                if (is_closed(h, w) || cell_states[h][w] == 0){
                     continue;
                 }
                 vector<pair<int, int>>& neighbor_positions = neighbor_list[h][w];
@@ -129,37 +149,34 @@ struct MineSweeperSolver {
                     continue;
                 }
                 for (const auto& [y, x]: neighbor_positions){
-                    if (cell_states[y][x] == -1) {
-                        bomb_cells[y][x] = true;
+                    if (is_closed(y, x)) {
+                        cell_definitions[y][x] = assumption_definition.bomb;
                     }
                 }
             }
         }
-        return bomb_cells;
     }
 
-    vector<vector<bool>> determine_safe_cells(){
-        vector<vector<bool>> safe_cells = vector<vector<bool>>(height, vector<bool>(width, false));
+    void determine_safe_cells(){
         for (int h = 0; h < height; ++h){
             for (int w = 0; w < width; ++w){
                 const int n_bombs_around = cell_states[h][w];
-                if (cell_states[h][w] < 0){
+                if (is_closed(h, w)){
                     continue;
                 }
                 vector<pair<int, int>>& neighbor_positions = neighbor_list[h][w];
-                safe_cells[h][w] = true;  // This is an open cell, so it is safe.
+                cell_definitions[h][w] = assumption_definition.safe;  // This is an open cell, so it is safe.
                 int n_determined_bombs = count_bomb_around(neighbor_positions);
                 if (n_bombs_around != n_determined_bombs){
                     continue;
                 }
                 for (const auto& [y, x]: neighbor_positions){
-                    if (!bomb_cells[y][x]){
-                        safe_cells[y][x] = true;
+                    if (!is_bomb(y, x)){
+                        cell_definitions[y][x] = assumption_definition.safe;
                     }
                 }
             }
         }
-        return safe_cells;
     }
 
     vector<vector<vector<pair<int, int>>>> get_neighbor_list(){
@@ -193,9 +210,7 @@ struct MineSweeperSolver {
         for (int h = 0; h < height; ++h){
             for (int w = 0; w < width; ++w){
                 if (
-                    cell_states[h][w] != -1 ||
-                    bomb_cells[h][w] ||
-                    safe_cells[h][w] ||
+                    cell_definitions[h][w] != assumption_definition.undefined ||
                     count_open_around(neighbor_list[h][w]) == 0
                 ) {
                     continue;
@@ -206,13 +221,13 @@ struct MineSweeperSolver {
         return target_cell_positions;
     }
 
-    bool is_assumption_valid(int h, int w, int n_defined_bombs) {
-        if (n_hard_cells < n_total_bombs - n_defined_bombs || n_defined_bombs > n_total_bombs) {
+    bool is_assumption_valid(int h, int w, int n_defined_bombs, int n_undefined_cells) {
+        if (n_hard_cells + n_undefined_cells < n_total_bombs - n_defined_bombs || n_defined_bombs > n_total_bombs) {
             return false;
         }
 
         for (const auto& [y, x]: neighbor_list[h][w]){
-            if (cell_states[y][x] == -1) {
+            if (is_closed(y, x)) {
                 continue;
             }
             vector<pair<int, int>>& neighbor_positions = neighbor_list[y][x];
@@ -232,7 +247,7 @@ struct MineSweeperSolver {
         long double prob = combination_memo[n_hard_cells][n_total_bombs - n_defined_bombs];
         for (int i = 0; i < n_targets; ++i){
             const auto& [h, w] = target_cell_positions[i];
-            if (bomb_cells[h][w]) {
+            if (is_bomb(h, w)) {
                 probs[i] += prob;
             }
         }
@@ -249,16 +264,16 @@ struct MineSweeperSolver {
             return;
         }
         const auto& [h, w] = target_cell_positions[target_index];
-        bomb_cells[h][w] = true;
-        if (is_assumption_valid(h, w, n_defined_bombs + 1)){
+        cell_definitions[h][w] = assumption_definition.bomb;
+        int n_undefined_cells = n_targets - target_index - 1;
+        if (is_assumption_valid(h, w, n_defined_bombs + 1, n_undefined_cells)){
             depth_first_search(target_index + 1, n_defined_bombs + 1);
         }
-        bomb_cells[h][w] = false;
-        safe_cells[h][w] = true;
-        if (is_assumption_valid(h, w, n_defined_bombs)) {
+        cell_definitions[h][w] = assumption_definition.safe;
+        if (is_assumption_valid(h, w, n_defined_bombs, n_undefined_cells)) {
             depth_first_search(target_index + 1, n_defined_bombs);
         }
-        safe_cells[h][w] = false;
+        cell_definitions[h][w] = assumption_definition.undefined;
     }
 
     vector<vector<long double>> get_probs(){
@@ -277,9 +292,9 @@ struct MineSweeperSolver {
                 if (prob_in_cells[h][w] >= 0) {
                     continue;
                 }
-                if (safe_cells[h][w] || cell_states[h][w] != -1) {
+                if (is_safe(h, w)) {
                     prob_in_cells[h][w] = 0.0;
-                } else if (bomb_cells[h][w]) {
+                } else if (is_bomb(h, w)) {
                     prob_in_cells[h][w] = 1.0;
                 } else {
                     prob_in_cells[h][w] = probs[n_targets];

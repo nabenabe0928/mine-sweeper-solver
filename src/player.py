@@ -7,6 +7,9 @@ from src.mine_sweeper import MineSweeper
 from src.probability import ProbabilityCalculator
 
 
+import mine_sweeper_solver
+
+
 class Player:
     def __init__(self, field: MineSweeper):
         """
@@ -112,7 +115,16 @@ class Player:
             neighbors=self._field.neighbors,
             n_mines=self._field.n_mines,
         )
+        probs_cpp = np.asarray(
+            mine_sweeper_solver.calculate_probability(
+                self._field.cell_state.reshape(self.H, self.W).tolist(), self._field.n_mines
+            )
+        ).flatten()
         target, p_land = prob.compute()
+        if not np.allclose(target.proba, probs_cpp[target.index]):
+            raise ValueError(
+                target.proba, probs_cpp[target.index], target.index
+            )
         safe_cell_exist = np.count_nonzero(target.proba == 0.0)
 
         if safe_cell_exist:
