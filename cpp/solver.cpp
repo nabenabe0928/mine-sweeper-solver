@@ -1,12 +1,9 @@
-#include <iostream>
 #include <vector>
-#include <tuple>
 #include <functional>
 
 using std::vector;
 using std::pair;
 using std::function;
-using std::tie;
 
 typedef vector<int> vi1;
 typedef vector<vi1> vi2;
@@ -17,19 +14,6 @@ typedef vector<vd1> vd2;
 typedef vector<pair<int, int>> vpi1;
 typedef vector<vpi1> vpi2;
 typedef vector<vpi2> vpi3;
-
-void print(){}
-void println(){std::cout << std::endl;}
-template <class Head, class... Tail>
-void print(Head&& head, Tail&&... tail){std::cout << head; if (sizeof...(tail) != 0) std::cout << " "; print(std::forward<Tail>(tail)...);}
-template <class T>
-void print(vector<T>& vs){for (auto v: vs){std::cout << v; if (&v != &vs.back()) std::cout << " ";} std::cout << std::endl;}
-template <class Head, class... Tail>
-void println(Head&& head, Tail&&... tail){std::cout << head; if (sizeof...(tail) != 0) std::cout << " "; println(std::forward<Tail>(tail)...);}
-template <class T>
-void println(vector<T>& vs){for (auto v: vs) std::cout << v << std::endl;}
-
-// Math
 
 void compute_combination(vd2& combination_memo){
     int n = combination_memo.size();
@@ -46,8 +30,6 @@ void normalize_probs(vd1& probs, long double prob_sum) {
         p /= prob_sum;
     }
 }
-
-// Count utilities
 
 int count_close_around(vi2& cell_states, vpi1& neighbor_positions){
     int count = 0;
@@ -400,35 +382,4 @@ vd2 solve(vi2& cell_states, int n_total_bombs){
     );
     normalize_probs(probs, prob_sum);
     return assign_probs(probs, target_cell_positions, cell_states, bomb_cells, safe_cells);
-}
-
-int main(){
-    // https://github.com/nabenabe0928/mine-sweeper-solver/blob/main/demodata/medium14/demo012.png
-    vi2 cell_states = {
-        {-1, -1, -1, -1, -1, -1, -1, -1, 2, 1, 1, -1, 1, 0, 1, -1},
-        {-1, -1, -1, -1, -1, 2, -1, -1, -1, 2, 1, 2, 2, 1, 1, 1},
-        {-1, -1, -1, -1, -1, 1, 1, 3, -1, 2, 0, 2, -1, 2, 0, 0},
-        {-1, -1, -1, -1, -1, 2, 2, 2, 1, 1, 0, 2, -1, 3, 1, 0},
-        {-1, -1, -1, -1, -1, -1, -1, 1, 1, 2, 2, 2, 2, -1, 2, 1},
-        {-1, -1, -1, -1, -1, 3, 2, 1, 1, -1, -1, 1, 1, 2, -1, 1},
-        {-1, -1, -1, -1, -1, 2, 1, 0, 1, 2, 2, 1, 0, 1, 1, 1},
-        {-1, -1, -1, -1, -1, -1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {-1, -1, -1, -1, -1, -1, 2, 0, 0, 0, 0, 0, 1, 1, 1, 0},
-        {-1, -1, -1, -1, -1, 3, 3, 2, 1, 1, 1, 1, 1, -1, 1, 0},
-        {-1, -1, -1, -1, -1, 2, -1, -1, 2, 2, -1, 1, 1, 1, 1, 0},
-        {-1, -1, -1, -1, -1, 3, 3, 2, 2, -1, 2, 1, 1, 1, 2, 1},
-        {-1, -1, -1, -1, -1, -1, 1, 0, 1, 1, 1, 1, 2, -1, 2, -1},
-        {-1, -1, -1, -1, -1, 2, 3, 1, 1, 0, 0, 1, -1, 2, 2, 1},
-        {-1, -1, -1, -1, -1, -1, 2, -1, 1, 1, 1, 2, 1, 1, 0, 0},
-        {-1, -1, -1, -1, -1, 1, 2, 1, 1, 1, -1, 1, 0, 0, 0, 0},
-    };
-    vd2 probs = solve(cell_states, 40);
-    const int height = probs.size();
-    const int width = probs[0].size();
-    for (int h = 0; h < height; ++h) {
-        for (int w = 0; w < width; ++w){
-            print((std::to_string(probs[h][w]) + ".00").substr(0, 4), "");
-        }
-        println();
-    }
 }
