@@ -64,13 +64,7 @@ struct MineSweeperSolver {
     }
 
     int count_open_around(vector<pair<int, int>>& neighbor_positions){
-        int count = 0;
-        for (const auto& [y, x]: neighbor_positions){
-            if (cell_states[y][x] != -1){
-                ++count;
-            }
-        }
-        return count;
+        return neighbor_positions.size() - count_close_around(neighbor_positions);
     }
 
     int count_bomb_around(vector<pair<int, int>>& neighbor_positions){
