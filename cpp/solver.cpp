@@ -1,10 +1,7 @@
-#include <iostream>
 #include <vector>
-#include <functional>
 
 using std::vector;
 using std::pair;
-using std::function;
 
 vector<vector<long double>> compute_combination(int n){
     vector<vector<long double>> combination_memo = vector<vector<long double>>(n, vector<long double>(n, 0.0));
@@ -17,12 +14,6 @@ vector<vector<long double>> compute_combination(int n){
     return combination_memo;
 }
 
-void normalize_probs(vector<long double>& probs, long double prob_sum) {
-    for (auto& p: probs) {
-        p /= prob_sum;
-    }
-}
-
 struct MineSweeperSolver {
     // constant variables.
     const vector<vector<int>> cell_states;
@@ -32,6 +23,7 @@ struct MineSweeperSolver {
     vector<vector<vector<pair<int, int>>>> neighbor_list;
     int n_hard_cells;
     int n_initial_bombs;
+    int n_targets;
     vector<vector<long double>> combination_memo;
     vector<pair<int, int>> target_cell_positions;
 
@@ -53,6 +45,7 @@ struct MineSweeperSolver {
         bomb_cells = determine_bomb_cells();
         safe_cells = determine_safe_cells();
         target_cell_positions = collect_target_cell_positions();
+        n_targets = target_cell_positions.size();
         combination_memo = compute_combination(width * height + 1);
         probs = vector<long double>(target_cell_positions.size() + 1, 0.0);
         n_hard_cells = count_hard_cells();
@@ -176,7 +169,11 @@ struct MineSweeperSolver {
     }
 
     vector<vector<vector<pair<int, int>>>> get_neighbor_list(){
-        vector<vector<vector<pair<int, int>>>> neighbor_list = vector<vector<vector<pair<int, int>>>>(height, vector<vector<pair<int, int>>>(width, vector<pair<int, int>>()));
+        vector<vector<vector<pair<int, int>>>> neighbor_list = vector<vector<vector<pair<int, int>>>>(
+            height, vector<vector<pair<int, int>>>(
+                width, vector<pair<int, int>>()
+            )
+        );
         for (int h = 0; h < height; ++h){
             for (int w = 0; w < width; ++w){
                 for (int dy = -1; dy <= 1; ++dy){
@@ -215,7 +212,11 @@ struct MineSweeperSolver {
         return target_cell_positions;
     }
 
-    bool is_assumption_valid(int h, int w) {
+    bool is_assumption_valid(int h, int w, int n_defined_bombs) {
+        if (n_hard_cells < n_total_bombs - n_defined_bombs || n_defined_bombs > n_total_bombs) {
+            return false;
+        }
+
         for (const auto& [y, x]: neighbor_list[h][w]){
             if (cell_states[y][x] == -1) {
                 continue;
@@ -235,7 +236,6 @@ struct MineSweeperSolver {
     void compute_prob(int n_defined_bombs) {
         // n_hard_cells >= n_total_bombs - n_defined_bombs
         long double prob = combination_memo[n_hard_cells][n_total_bombs - n_defined_bombs];
-        int n_targets = target_cell_positions.size();
         for (int i = 0; i < n_targets; ++i){
             const auto& [h, w] = target_cell_positions[i];
             if (bomb_cells[h][w]) {
@@ -250,36 +250,30 @@ struct MineSweeperSolver {
     }
 
     void depth_first_search(int target_index, int n_defined_bombs) {
-        int n_targets = target_cell_positions.size();
         if (n_targets == target_index) {
             compute_prob(n_defined_bombs);
             return;
         }
         const auto& [h, w] = target_cell_positions[target_index];
         bomb_cells[h][w] = true;
-        if (
-            n_hard_cells >= n_total_bombs - n_defined_bombs - 1 &&
-            n_defined_bombs + 1 <= n_total_bombs &&
-            is_assumption_valid(h, w)
-        ){
+        if (is_assumption_valid(h, w, n_defined_bombs + 1)){
             depth_first_search(target_index + 1, n_defined_bombs + 1);
         }
         bomb_cells[h][w] = false;
         safe_cells[h][w] = true;
-        if (
-            n_hard_cells >= n_total_bombs - n_defined_bombs &&
-            n_defined_bombs <= n_total_bombs &&
-            is_assumption_valid(h, w)
-        ){
+        if (is_assumption_valid(h, w, n_defined_bombs)) {
             depth_first_search(target_index + 1, n_defined_bombs);
         }
         safe_cells[h][w] = false;
     }
 
     vector<vector<long double>> get_probs(){
-        vector<vector<long double>> prob_in_cells = vector<vector<long double>>(height, vector<long double>(width, -1.0));
-        const int n_targets = target_cell_positions.size();
-        normalize_probs(probs, prob_sum);
+        vector<vector<long double>> prob_in_cells = vector<vector<long double>>(
+            height, vector<long double>(width, -1.0)
+        );
+        for (auto& p: probs) {
+            p /= prob_sum;
+        }
         for (int i = 0; i < n_targets; ++i) {
             const auto& [y, x] = target_cell_positions[i];
             prob_in_cells[y][x] = probs[i];
@@ -311,46 +305,3 @@ vector<vector<long double>> solve(vector<vector<int>>& cell_states, int n_total_
     MineSweeperSolver solver = MineSweeperSolver(cell_states, n_total_bombs);
     return solver.solve();
 }
-
-void print(){}
-void println(){std::cout << std::endl;}
-template <class Head, class... Tail>
-void print(Head&& head, Tail&&... tail){std::cout << head; if (sizeof...(tail) != 0) std::cout << " "; print(std::forward<Tail>(tail)...);}
-template <class T>
-void print(vector<T>& vs){for (auto v: vs){std::cout << v; if (&v != &vs.back()) std::cout << " ";} std::cout << std::endl;}
-template <class Head, class... Tail>
-void println(Head&& head, Tail&&... tail){std::cout << head; if (sizeof...(tail) != 0) std::cout << " "; println(std::forward<Tail>(tail)...);}
-template <class T>
-void println(vector<T>& vs){for (auto v: vs) std::cout << v << std::endl;}
-
-int main(){
-    // https://github.com/nabenabe0928/mine-sweeper-solver/blob/main/demodata/medium14/demo012.png
-    vector<vector<int>> cell_states = {
-        {-1, -1, -1, -1, -1, -1, -1, -1, 2, 1, 1, -1, 1, 0, 1, -1},
-        {-1, -1, -1, -1, -1, 2, -1, -1, -1, 2, 1, 2, 2, 1, 1, 1},
-        {-1, -1, -1, -1, -1, 1, 1, 3, -1, 2, 0, 2, -1, 2, 0, 0},
-        {-1, -1, -1, -1, -1, 2, 2, 2, 1, 1, 0, 2, -1, 3, 1, 0},
-        {-1, -1, -1, -1, -1, -1, -1, 1, 1, 2, 2, 2, 2, -1, 2, 1},
-        {-1, -1, -1, -1, -1, 3, 2, 1, 1, -1, -1, 1, 1, 2, -1, 1},
-        {-1, -1, -1, -1, -1, 2, 1, 0, 1, 2, 2, 1, 0, 1, 1, 1},
-        {-1, -1, -1, -1, -1, -1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {-1, -1, -1, -1, -1, -1, 2, 0, 0, 0, 0, 0, 1, 1, 1, 0},
-        {-1, -1, -1, -1, -1, 3, 3, 2, 1, 1, 1, 1, 1, -1, 1, 0},
-        {-1, -1, -1, -1, -1, 2, -1, -1, 2, 2, -1, 1, 1, 1, 1, 0},
-        {-1, -1, -1, -1, -1, 3, 3, 2, 2, -1, 2, 1, 1, 1, 2, 1},
-        {-1, -1, -1, -1, -1, -1, 1, 0, 1, 1, 1, 1, 2, -1, 2, -1},
-        {-1, -1, -1, -1, -1, 2, 3, 1, 1, 0, 0, 1, -1, 2, 2, 1},
-        {-1, -1, -1, -1, -1, -1, 2, -1, 1, 1, 1, 2, 1, 1, 0, 0},
-        {-1, -1, -1, -1, -1, 1, 2, 1, 1, 1, -1, 1, 0, 0, 0, 0},
-    };
-    vector<vector<long double>> probs = solve(cell_states, 40);
-    const int height = probs.size();
-    const int width = probs[0].size();
-    for (int h = 0; h < height; ++h) {
-        for (int w = 0; w < width; ++w){
-            print((std::to_string(probs[h][w]) + ".00").substr(0, 4), "");
-        }
-        println();
-    }
-}
- 
