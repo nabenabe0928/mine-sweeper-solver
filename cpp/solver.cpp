@@ -64,7 +64,7 @@ struct MineSweeperSolver {
     }
 
     int count_open_around(vector<pair<int, int>>& neighbor_positions){
-        return neighbor_positions.size() - count_close_around(neighbor_positions);
+        return (int) neighbor_positions.size() - count_close_around(neighbor_positions);
     }
 
     int count_bomb_around(vector<pair<int, int>>& neighbor_positions){
@@ -95,7 +95,7 @@ struct MineSweeperSolver {
                     continue;
                 }
                 vector<pair<int, int>>& neighbor_positions = neighbor_list[h][w];
-                if (count_close_around(neighbor_positions) == neighbor_positions.size()) {
+                if (count_close_around(neighbor_positions) == (int) neighbor_positions.size()) {
                     ++count;
                 }
             }
@@ -295,7 +295,7 @@ struct MineSweeperSolver {
     }
 };
 
-vector<vector<long double>> solve(vector<vector<int>>& cell_states, int n_total_bombs){
+vector<vector<long double>> calculate_prob(vector<vector<int>>& cell_states, int n_total_bombs){
     MineSweeperSolver solver = MineSweeperSolver(cell_states, n_total_bombs);
     return solver.solve();
 }

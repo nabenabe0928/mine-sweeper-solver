@@ -8,3 +8,6 @@
 **/results/
 **/.ipynb_checkpoints/
 .coverage
+
+build/
+venv/
