@@ -18,9 +18,9 @@ Here, I listed the winning rate in each difficulty.
 
 |Difficulty | Win | Lose | Winning rate |
 |:--:|:--:|:--:|:--:|
-|Easy | 9602 | 398 | 97.4%|
-|Medium | 1742 | 258 | 87.1%|
-|Hard | 181 | 219 | 45.3%|
+|Easy | 9598 | 402 | 96%|
+|Medium | 8725 | 1275 | 87%|
+|Hard | 460 | 540 | 46%|
 
 Note that each difficulty has the following field:
 - Easy: $9 \times 9$ with $10$ mines
