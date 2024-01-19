@@ -33,30 +33,30 @@ In the experiments, seeds 132, 182, 188, 243, 268, and 273 in Hard did not finis
 
 ```shell
 # Easy
-python solve.py --diff easy --seed 0 --N 1000
+python solve.py --diff easy --seed 0 --N 1000 --cpp False
 
 # Medium
-python solve.py --diff medium --seed 0 --N 1000
+python solve.py --diff medium --seed 0 --N 1000 --cpp False
 
 # Medium
-python solve.py --diff hard --seed 0 --N 100
+python solve.py --diff hard --seed 0 --N 100 --cpp False
 ```
+
+> [!NOTE]
+> If you would like to use the C++ implementation, you need to build the C++ code and move it to your Python path.
+> ```shell
+> $ mkdir build
+> $ cd build
+> $ cmake ..
+> $ make
+> # For example, the path is under the site-packages/ directory of your Python.
+> $ mv mine_sweeper_solver.* <path/to/your/python/lib>
+> ```
 
 Also, for the visualization demo, try the following command:
 
 ```shell
 python validate_probability.py
-```
-
-## Build with the C++ implementation
-
-```shell
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-# For example, the path is under the site-packages/ directory of your Python.
-$ mv mine_sweeper_solver.* <path/to/your/python/lib>
 ```
 
 ## Demos with other seeds
